@@ -29,8 +29,12 @@ All data will be written in EXIF “UserComment” as JSON to JPG/JPEG picture f
 
 
 Developed with Lazarus IDE 2.0.10   https://www.lazarus-ide.org/
+
 Compiled with FPC 3.2.0
+
 Needed component:    https://sourceforge.net/p/lazarus-ccr/svn/HEAD/tree/components/fpexif/
 
+
 EXIF tags:    https://exiftool.org/TagNames/EXIF.html
+
 JSON schema:  http://json-schema.org/
