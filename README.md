@@ -1,5 +1,5 @@
 # EXIFupdate
-Brief description
+<b>Update EXIF data of JPG/JPEG pictures from Yuneec Typhoon H (CGO3+)</b>
 
 Collected data
 
