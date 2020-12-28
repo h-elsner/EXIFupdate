@@ -1,6 +1,6 @@
 # EXIFupdate
 <b>Update EXIF data of JPG/JPEG pictures from Yuneec Typhoon H (CGO3+)</b>
-
+![Screenshot](/doc/Screenshot_Tab.png)
 Collected data
 
  * Path to FlightLog,
