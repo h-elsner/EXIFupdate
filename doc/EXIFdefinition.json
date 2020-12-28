@@ -1,0 +1,59 @@
+{  "FlightLog":{
+      "Path":"",
+      "Number":"",
+      "Controller role":"Single mode"
+    },
+   "Model":{
+      "manifest":{
+         "fpv":"",
+         "version":"",
+         "name":"",
+         "type":"",
+         "f_mode_key":"",
+         "analog_min":"",
+         "switch_min":"",
+         "rx_analog_num":"",
+         "rx_switch_num":"",
+         "alias":""      },
+      "analog":["",""],
+      "curves":["",""],
+      "switches":["",""]
+    },
+   "AdditionalText": "",
+   "DataHeaders": {
+	  "Telemetry":"Date/time,...",
+      "Remote":"Date/time,...",
+      "RemoteGPS":"Date/time,..."
+    },
+   "TakeOff":{
+      "Telemetry":{
+         "LineNumber":0,
+         "Data":""},
+      "Remote":{
+         "LineNumber":0,
+         "Data":""},
+      "RemotGPS":{
+         "LineNumber":0,
+         "Data":""}
+    },
+   "CameraShoot":{
+      "SequenceNo":1,
+      "Telemetry":{
+         "LineNumber":0,
+         "Data":""},
+      "Remote":{
+         "LineNumber":0,
+         "Data":""},
+      "RemotGPS":{
+         "LineNumber":0,
+         "Data":""},
+      "DistanceToPreviousPosition":0,
+      "Bearing":0,
+	  "Ascent":-0.001,
+      "XMPdata":{
+         "GPSaltutude":"",
+         "CameraYaw":"",
+         "CameraPitch":"",
+         "CameraRoll":""}
+   }
+}
