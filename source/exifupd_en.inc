@@ -34,6 +34,11 @@ resourcestring
   hntJSON='Create additional JSON files per picure file';
   capEXIFwrite='Update EXIF';
   hntEXIFwrite='Enable writing EXIF data into the picture file';
+  capCorrAlt='Geoid calculation';
+  capAutoGeoid='Obtain from internet';
+  hntAutoGeoid='Obtain correction value automatically from web tool GeoidEval';
+  capGravity='Gravity model';
+  hntGravity='Select preferred gravity model for correction value';
 
   capKeepComment='Keep original UserComment';
   hntKeepComment='Keep original user comment in EXIF as part of UserComment';

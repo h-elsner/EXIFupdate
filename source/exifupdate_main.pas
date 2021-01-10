@@ -73,8 +73,9 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Buttons, ComCtrls, XMLPropStorage, Grids, fileutil, dateutils, math, lclintf,
-  Menus, fpeMetaData, fpeTags, fpeExifData, clipbrd, MaskEdit;
+  Buttons, ComCtrls, XMLPropStorage, Grids, fileutil, IpHtml, Ipfilebroker,
+  Iphttpbroker, dateutils, math, lclintf, Menus, fpeMetaData, fpeTags,
+  fpeExifData, clipbrd, MaskEdit, opensslsockets;
 
 type                                                   {Data record for FlightLog data}
   TEXdata = record
@@ -110,11 +111,14 @@ type
     cbJSON: TCheckBox;
     cbEXIFwrite: TCheckBox;
     cbAddText: TCheckBox;
+    cbAutoGeoid: TCheckBox;
     edController: TEdit;
     gridPictures: TStringGrid;
     gbEXIF: TGroupBox;
     gbFiles: TGroupBox;
+    gbCorrAlt: TGroupBox;
     ImageList: TImageList;
+    iproHTMLin: TIpHttpDataProvider;
     lbeGeoid: TLabeledEdit;
     lblDelta: TLabel;
     lblLogs: TLabel;
@@ -137,6 +141,7 @@ type
     DirDialog: TSelectDirectoryDialog;
     MenuMemo: TPopupMenu;
     MenuGrid: TPopupMenu;
+    rgGravity: TRadioGroup;
     rgController: TRadioGroup;
     SaveDialog: TSaveDialog;
     Splitter1: TSplitter;
@@ -150,6 +155,7 @@ type
     procedure btnPicsClick(Sender: TObject);
     procedure btnScanClick(Sender: TObject);
     procedure cbAddTextChange(Sender: TObject);
+    procedure cbUpdateAltChange(Sender: TObject);
     procedure cbxLogsDblClick(Sender: TObject);
     procedure cbxPicsDblClick(Sender: TObject);
     procedure edControllerDblClick(Sender: TObject);
@@ -167,13 +173,14 @@ type
     procedure ScanPics;                                {Scan picture directory}
     procedure ShowSliderPos;                           {Show position of the slider}
     procedure ScanEnable;                              {Check if scanning is possible}
-
+    function  FindLineHTTP(const url, substr, errmsg: string): string;
   public
 
   end;
 
 var
   Form1: TForm1;
+  startpos: string;
 
 const
   makefilter='yuneec';                                 {Proper works only for Yuneec Typhoon H}
@@ -296,6 +303,11 @@ begin
   cbEXIFwrite.Hint:=hntEXIFwrite;
   cbAddText.Caption:=capSetInfo;
   cbAddtext.Hint:=hntSetInfo;
+  gbCorrAlt.Caption:=capCorrAlt;
+  cbAutoGeoid.Caption:=capAutoGeoid;
+  cbAutoGeoid.Hint:=hntAutoGeoid;
+  rgGravity.Caption:=capGravity;
+  rgGravity.Hint:=hntGravity;
 
   Memo1.Lines.Clear;
   Memo1.Hint:=hntMemo;
@@ -326,6 +338,7 @@ begin
   gridPictures.Rows[0].StrictDelimiter:=true;
   gridPictures.Rows[0].DelimitedText:=rsHeader;
   gridPictures.AutoSizeColumns;
+  startpos:='';
 end;
 
 procedure TForm1.ScanEnable;                           {Check if scanning is possible}
@@ -340,11 +353,16 @@ begin
   ScanEnable;
   Splitter1.Update;
   mnSetInfo.Checked:=cbAddText.Checked;
+  gbCorrAlt.Enabled:=cbUpdateAlt.Checked;
 end;
 
+{https://geographiclib.sourceforge.io/cgi-bin/GeoidEval?input=43.44+23.43&option=Submit}
 procedure TForm1.lbeGeoidDblClick(Sender: TObject);    {Call Geoid Eval}
 begin
-  OpenURL(urlGeoid);
+  if startpos<>'' then
+    OpenURL(urlGeoid+'?input='+startpos+'&option=Submit')
+  else
+    OpenURL(urlGeoid);
 end;
 
 procedure TForm1.mnClearClick(Sender: TObject);        {Clear text}
@@ -562,30 +580,83 @@ begin
   result.alt:=defalt;
 end;
 
-function CleanGeoid(txt: string; var geo: double): string;
-var i: integer;                                        {Check and convert input from edit}
+function FilterValue(s: string; p: integer=1): string; {Copy the first float string part}
+var i: integer;
     dot: boolean;
 begin
   result:='';
   dot:=true;
+  if length(s)>p then begin
+    for i:=p to length(s) do begin
+      if (s[i] in ziff) or (s[i]='-') then             {Collect digits}
+        result:=result+s[i];
+      if dot and                                       {Take only first dot}
+         ((s[i]='.') or (s[i]=',')) then begin
+        result:=result+DefaultFormatSettings.DecimalSeparator;
+        dot:=false;
+      end;
+    end;
+  end else
+    result:=altfrm;
+end;
+
+{Output GeoidEval (https://geographiclib.sourceforge.io/cgi-bin/GeoidEval):
+  <a href="http://earth-info.nga.mil/GandG/wgs84/gravitymod/egm2008">EGM2008</a> = <font color="blue">42.5261</font>
+  <a href="http://earth-info.nga.mil/GandG/wgs84/gravitymod/egm96/egm96.html">EGM96</a>   = <font color="blue">41.4735</font>
+  <a href="http://earth-info.nga.mil/GandG/wgs84gravitymod/wgs84_180/wgs84_180.html">EGM84</a>   = <font color="blue">41.8857</font></pre></font>
+}
+function ExtractHeight(s: string): string;             {Extract delta heigth from geoid}
+begin
+  result:=altfrm;                                      {Default: 0.00}
+  if length(s)>100 then                                {Correction value is somewhere at the end of the line}
+    result:=FilterValue(s, 100);
+end;
+
+function CleanGeoid(txt: string; var geo: double): string;
+begin
   geo:=0;
-  for i:=1 to length(txt) do begin
-    if (txt[i] in ziff) then                           {Collect digits}
-      result:=result+txt[i];
-    if dot and
-       ((txt[i]=DefaultFormatSettings.DecimalSeparator) or (txt[i]=',')) then begin
-      result:=result+DefaultFormatSettings.DecimalSeparator;
-      dot:=false;
+  result:=FilterValue(txt, 1);
+  if (result='') or (not TryStrToFloat(result, geo)) then
+    result:=altfrm;
+end;
+
+function TForm1.FindLineHTTP(const url, substr, errmsg: string): string;
+var strm: TStream;                                     {Find a line in HTML file from Internet}
+    inlist: TStringList;
+    i: integer;
+    ct: string;
+begin
+  result:='';                                          {Default: Empty string}
+  if length(url)>8 then begin
+    inlist:=TStringList.Create;
+    ct:='';
+    result:=errmsg;
+    try
+      try
+        if iproHTMLin.CheckURL(url, ct) then           {Test the URL if connection is possible}
+          strm:=iproHTMLin.DoGetStream(url);           {Download file to stream}
+      except
+        on e: Exception do begin
+          result:=e.Message;                           {Error message as result}
+          exit;
+        end;
+      end;
+      if strm.Size>100 then                            {Check if download was successful}
+        inlist.LoadFromStream(strm);
+      if inlist.count>0 then begin                     {Check if input may be usable}
+        for i:=0 to inlist.count-1 do begin            {Find keyword in list}
+          if pos(substr, inlist[i])>0 then begin
+            result:=inlist[i];                         {Result is string where the keywors is in}
+            break;                                     {Finish when first hit was found}
+          end;
+        end;
+      end;
+    finally
+      inlist.Free;
     end;
   end;
-  if result<>'' then begin
-    if txt[1]='-' then                                 {signed?}
-      result:='-'+result;
-    if not TryStrToFloat(result, geo) then             {Convert to float}
-      result:=altfrm;
-  end else
-    result:=altfrm;                                    {Zero if invalid input}
 end;
+
 
 {XMP data in CGO3+ picture files:
 
@@ -774,6 +845,11 @@ begin
   mnSetInfo.Checked:=cbAddText.Checked;
 end;
 
+procedure TForm1.cbUpdateAltChange(Sender: TObject);
+begin
+  gbCorrAlt.Enabled:=cbUpdateAlt.Checked;
+end;
+
 procedure TForm1.ScanPics;                             {Scan picture directory}
 var
   dsepdef: char;
@@ -898,9 +974,9 @@ var
   procedure EXIFaltitude(alt: double; ov: boolean);    {Cover negative valueus for Altitude}
   begin
     if alt<0 then
-      WriteTagAsString(aImgInfo, exAltRef, '1', ov)
+      WriteTagAsString(aImgInfo, exAltRef, '1', ov)    {Below sea level}
     else
-      WriteTagAsString(aImgInfo, exAltRef, '0', ov);
+      WriteTagAsString(aImgInfo, exAltRef, '0', ov);   {Above sea level}
     WriteTagAsFloat(aImgInfo, exAlt, abs(alt), ov);
   end;
 
@@ -1176,6 +1252,15 @@ begin
 {Load Remote and RemoteGPS from take-off, common for all pictures}
         if stdat.telem<>'' then begin                  {if start data available}
 
+          startpos:=FormatFloat(coordfrm, stdat.lat)+'+'+
+                    FormatFloat(coordfrm, stdat.lon);  {for URL with cgi}
+
+          if cbUpdateAlt.Checked and cbAutoGeoid.Checked then begin  {Find correction value for geoid from internet}
+            fn:=FindLineHTTP(urlGeoid+'?input='+startpos+'&option=Submit',
+                             '>'+rgGravity.Items[rgGravity.ItemIndex]+'<', '');
+            lbeGeoid.Text:=ExtractHeight(fn);          {Update settings}
+          end;
+
           fn:=flpath+trem+PathDelim+trem+usID+flnum+cext;
           if FileExists(fn) then begin                 {load Remote.csv}
             remlist.LoadFromFile(fn);
@@ -1213,6 +1298,7 @@ begin
           ldat:=stdat;                                 {Save as previous dataset}
 
 {Save take-off data in first line of log file}
+          startpos:=FormatFloat(coordfrm, stdat.lat);
           loglist.Add(ExtractFileName(cbxLogs.Text)+sep+           {Filename telemetry}
                       FormatDateTime(timeformat, fdat)+sep+        {File date/time}
                       FormatDateTime(timeformat, stdat.zeit)+sep+  {Time take-off telemetry}
@@ -1227,16 +1313,16 @@ begin
                       splitlist[12]);                              {Yaw}
 
 {Get log data for RemoteGPS}
-                      picdat:=ClearTXD;                            {picdat reused for RC data}
-                      try                                          {Try to find Distance to RC}
-                        picdat.lat:=StrToFloat(stdat.regps.Split([sep])[2]);
-                        picdat.lon:=StrToFloat(stdat.regps.Split([sep])[1]);
-                        picdat.alt:=DeltaCoord(stdat.lat, stdat.lon, picdat.lat, picdat.lon);
-                        picdat.regps:=FormatFloat(altfrm, picdat.alt);
-                      except
-                        picdat.regps:='';
-                      end;
-                      picdat.zeit:=FileDateToDateTime(FileAge(fn));
+          picdat:=ClearTXD;                                        {picdat reused for RC data}
+          try                                                      {Try to find Distance to RC}
+            picdat.lat:=StrToFloat(stdat.regps.Split([sep])[2]);
+            picdat.lon:=StrToFloat(stdat.regps.Split([sep])[1]);
+            picdat.alt:=DeltaCoord(stdat.lat, stdat.lon, picdat.lat, picdat.lon);
+            picdat.regps:=FormatFloat(altfrm, picdat.alt);
+          except
+            picdat.regps:='';
+          end;
+          picdat.zeit:=FileDateToDateTime(FileAge(fn));
 
           loglist.Add(ExtractFileName(fn)+sep+                     {Filename RemoteGPS}
                       FormatDateTime(timeformat, picdat.zeit)+sep+ {File date/time}
@@ -1277,7 +1363,12 @@ begin
             gridPictures.Cells[1, i+1]:=FormatDateTime(timeformat, picdat.zeit);
             aImgInfo:=TImgInfo.Create;
             try
-              aImgInfo.LoadFromFile(filelist[i]);
+              try
+                aImgInfo.LoadFromFile(filelist[i]);
+              except                                   {Error message data structure EXIF}
+                on e: Exception do
+                  gridPictures.Cells[12, i+1]:=e.Message;
+              end;
               splitlist.Clear;
               splitlist.Delimiter:=sep;
               splitlist.StrictDelimiter:=true;
@@ -1376,7 +1467,7 @@ begin
 
                 except                                 {Error message EXIF}
                   on e: Exception do
-                    gridPictures.Cells[2, i+1]:=e.Message;
+                    gridPictures.Cells[12, i+1]:=e.Message;
                 end;
 
               end else

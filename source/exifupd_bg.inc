@@ -34,6 +34,11 @@ resourcestring
   hntJSON='Create additional JSON files per picure file';
   capEXIFwrite='Update EXIF';
   hntEXIFwrite='Enable writing EXIF data into the picture file';
+  capCorrAlt='Geoid calculation';
+  capAutoGeoid='Obtain from internet';
+  hntAutoGeoid='Obtain correction value automatically from web tool GeoidEval';
+  capGravity='Gravity model';
+  hntGravity='Select preferred gravity model for correction value';
 
   capKeepComment='Запазете оригиналния UserComment';
   hntKeepComment='Запазете оригиналния потребителски коментар в EXIF като част от UserComment';
@@ -56,6 +61,7 @@ resourcestring
   rsNoFlight='Не е намерен моментът на излитане';
   rsMissLog='Липсва FlightLog';
   rsSavedTo='запазено като';
+  rsfailDir='Failed to create folder';
 
   rgitem0='Single mode';
   rgitem1='Team mode main';
