@@ -119,6 +119,8 @@ type
     gbCorrAlt: TGroupBox;
     ImageList: TImageList;
     iproHTMLin: TIpHttpDataProvider;
+    lblGitHub: TLabel;
+    lblManual: TLabel;
     lbeGeoid: TLabeledEdit;
     lblDelta: TLabel;
     lblLogs: TLabel;
@@ -162,6 +164,12 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure lbeGeoidDblClick(Sender: TObject);
+    procedure lblGitHubClick(Sender: TObject);
+    procedure lblGitHubMouseEnter(Sender: TObject);
+    procedure lblGitHubMouseLeave(Sender: TObject);
+    procedure lblManualClick(Sender: TObject);
+    procedure lblManualMouseEnter(Sender: TObject);
+    procedure lblManualMouseLeave(Sender: TObject);
     procedure mnClearClick(Sender: TObject);
     procedure mnLoadClick(Sender: TObject);
     procedure mnPasteClick(Sender: TObject);
@@ -208,6 +216,8 @@ const
   le=LineEnding;                                       {Better readable for tests}
 //  le='';                                               {No line breaks}
   urlGeoid='https://geographiclib.sourceforge.io/cgi-bin/GeoidEval';
+  githublink='https://github.com/h-elsner/EXIFupdate';
+  manual='Manual.pdf';
 
 {JSON IDs}
   strID='"';
@@ -263,6 +273,11 @@ implementation
 
 { TForm1 }
 
+function GetExePath: string;                           {Path to exe file with / at the end}
+begin
+  result:=IncludeTrailingPathDelimiter(ExtractFilePath(Application.ExeName));
+end;
+
 procedure TForm1.FormCreate(Sender: TObject);          {Initialize GUI captions}
 begin
   Caption:=capForm;
@@ -308,6 +323,10 @@ begin
   cbAutoGeoid.Hint:=hntAutoGeoid;
   rgGravity.Caption:=capGravity;
   rgGravity.Hint:=hntGravity;
+  lblGitHub.Caption:=capGitHub;
+  lblGitHub.Hint:=githublink;
+  lblManual.Caption:=capManual;
+  lblManual.Hint:=GetExePath+manual;
 
   Memo1.Lines.Clear;
   Memo1.Hint:=hntMemo;
@@ -363,6 +382,38 @@ begin
     OpenURL(urlGeoid+'?input='+startpos+'&option=Submit')
   else
     OpenURL(urlGeoid);
+end;
+
+procedure TForm1.lblGitHubClick(Sender: TObject);      {Open GitHub repo}
+begin
+  if OpenURL(lblGitHub.Hint) then
+    lblGitHub.Font.Color:=clPurple;
+end;
+
+procedure TForm1.lblGitHubMouseEnter(Sender: TObject); {Animate link}
+begin
+  lblGitHub.Font.Style:=lblGitHub.Font.Style+[fsBold];
+end;
+
+procedure TForm1.lblGitHubMouseLeave(Sender: TObject);
+begin
+  lblGitHub.Font.Style:=lblGitHub.Font.Style-[fsBold];
+end;
+
+procedure TForm1.lblManualClick(Sender: TObject);      {Open user manual}
+begin
+  if OpenDocument(lblManual.Hint) then
+    lblManual.Font.Color:=clPurple;
+end;
+
+procedure TForm1.lblManualMouseEnter(Sender: TObject); {Animate link}
+begin
+  lblManual.Font.Style:=lblManual.Font.Style+[fsBold];
+end;
+
+procedure TForm1.lblManualMouseLeave(Sender: TObject);
+begin
+  lblManual.Font.Style:=lblManual.Font.Style-[fsBold];
 end;
 
 procedure TForm1.mnClearClick(Sender: TObject);        {Clear text}
@@ -1374,14 +1425,16 @@ begin
               splitlist.StrictDelimiter:=true;
               if aImgInfo.HasEXIF then begin
                 try
-                  picdat.zeit:=GetEXIFtime(aImgInfo);  {Read EXIF data}
+                  picdat.zeit:=GetEXIFtime(aImgInfo);
+                  if picdat.zeit=0 then                {EXIF time not available (i.e. CGO)}
+                    picdat.zeit:=fdat;                 {Take file date time}
                   picdat.lat:=ReadFloat(aImgInfo, exLat);
                   picdat.lon:=ReadFloat(aImgInfo, exLon);
                   cam:=ReadTag(aImgInfo, exCam, '');
 
 {List all picture files in info table}
                   gridPictures.Cells[1, i+1]:=FormatDateTime(timeformat, picdat.zeit);
-                  gridPictures.Cells[2, i+1]:=ReadTag(aImgInfo, exVersn, '');
+                  gridPictures.Cells[2, i+1]:=ReadTag(aImgInfo, exVersn, '0000');
                   if (picdat.lat<>0) or (picdat.lon<>0) then
                     gridPictures.Cells[3, i+1]:='EXIF'; {Valid coordinates in EXIF}
 

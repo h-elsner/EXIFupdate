@@ -39,6 +39,8 @@ resourcestring
   hntAutoGeoid='Obtain correction value automatically from web tool GeoidEval';
   capGravity='Gravity model';
   hntGravity='Select preferred gravity model for correction value';
+  capGitHub='GitHub repository';
+  capManual='User manual';
 
   capKeepComment='Keep original UserComment';
   hntKeepComment='Keep original user comment in EXIF as part of UserComment';
