@@ -15,43 +15,17 @@
 
  Compiled with Lazarus 2.0.10/FPC 3.2.0  + fpEXIF
                    https://www.lazarus-ide.org/
+
  Needed component: https://sourceforge.net/p/lazarus-ccr/svn/HEAD/tree/components/fpexif/
+                   plus fpEXIF patch for Yuneec from wp_XYZ in r7965 (2021-01-17)
+
  EXIF tags:        https://exiftool.org/TagNames/EXIF.html
  JSON schema:      http://json-schema.org/
 
- Created: 2020-11-21 to 2020-12-06
+ Created: 2020-11-21 to 2021-01-17
 
+ fpEXIF patch for Yuneec from wp_XYZ in r7965
  =======================================================================================
-
- Patch component: https://sourceforge.net/p/lazarus-ccr/svn/HEAD/tree/components/fpexif/
-
-  In some pictures the space between segments is filled with $00 --->
-  rsJpegSegmentMarkerExpected = 'Defective JPEG structure: Segment marker ($FF) expected.';
-
-  Patch in "fpemetadata.pas" procedure TImgInfo.MergeToJpegStream(AInputStream, AOutputStream: TStream);
-  ....
-  while AInputStream.Position < AInputStream.Size do begin
-    savedPos := AInputStream.Position;      // just for debugging
-    n := AInputStream.Read(header{%H-}, SizeOf(header));
-    if n <> Sizeof(header) then
-      Error(rsIncompleteJpegSegmentHeader);
- --------------------------------------------------------------------------------
- // In some pictures the space between segments is filled with $00 (patch 12/2020)
-
-    if header.Key = 0 then
-      repeat                                //skip unnecessary $00
-        inc(savedPos);
-        AInputStream.Position := savedPos;  // Read next byte
-        n := AInputStream.Read(header{%H-}, SizeOf(header));
-        if n <> Sizeof(header) then
-          Error(rsIncompleteJpegSegmentHeader);
-      until header.Key <> 0;                // something else, hopefully a new segment
-
- --------------------------------------------------------------------------------
-    if header.Key <> $FF then
-      Error(rsJpegSegmentMarkerExpected);
-    header.Size := BEToN(header.Size);
- ....
 
  Ellipsoid vs. geoid:
  There are a lot of reference models used in the word to define null for the altitude.
