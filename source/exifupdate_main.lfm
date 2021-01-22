@@ -42,6 +42,7 @@ object Form1: TForm1
       Width = 510
       Anchors = [akTop, akLeft, akRight]
       ItemHeight = 15
+      OnChange = cbxLogsChange
       OnDblClick = cbxLogsDblClick
       TabOrder = 0
     end
@@ -52,6 +53,7 @@ object Form1: TForm1
       Width = 510
       Anchors = [akTop, akLeft, akRight]
       ItemHeight = 15
+      OnChange = cbxPicsChange
       OnDblClick = cbxPicsDblClick
       TabOrder = 1
     end
@@ -137,8 +139,8 @@ object Form1: TForm1
     TabOrder = 2
     object tabMain: TTabSheet
       Caption = 'tabMain'
-      ClientHeight = 458
-      ClientWidth = 876
+      ClientHeight = 449
+      ClientWidth = 878
       ImageIndex = 8
       object gridPictures: TStringGrid
         Left = 0

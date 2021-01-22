@@ -48,8 +48,8 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
   Buttons, ComCtrls, XMLPropStorage, Grids, fileutil, IpHtml, Ipfilebroker,
-  Iphttpbroker, dateutils, math, lclintf, Menus, fpeMetaData, fpeTags,
-  fpeExifData, clipbrd, MaskEdit, opensslsockets;
+  Iphttpbroker, dateutils, math, lclintf, Menus, fpeMetaData, fpeExifData,
+  exifstuff, clipbrd, MaskEdit, opensslsockets;
 
 type                                                   {Data record for FlightLog data}
   TEXdata = record
@@ -64,6 +64,7 @@ type                                                   {Data record for FlightLo
 
   TXMPdat = record                                     {XMP data record from gimbal}
     alt:   string[32];
+    altr:  string[32];
     yaw:   string[32];
     pitch: string[32];
     roll:  string[32];
@@ -132,7 +133,9 @@ type
     procedure btnScanClick(Sender: TObject);
     procedure cbAddTextChange(Sender: TObject);
     procedure cbUpdateAltChange(Sender: TObject);
+    procedure cbxLogsChange(Sender: TObject);
     procedure cbxLogsDblClick(Sender: TObject);
+    procedure cbxPicsChange(Sender: TObject);
     procedure cbxPicsDblClick(Sender: TObject);
     procedure edControllerDblClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -202,31 +205,22 @@ const
   areID=']';
   rsDT='Date/time';                                    {Add to headers}
 
-{Used EXIF tags}
-  exMake=  'Make';
-  exCam=   'Model';
-  exVersn= 'ExifVersion';
-  exTime1= 'DateTimeOriginal';
-  exTime2= 'DateTime';
-  exTime3= 'DateTimeDigitized';
-  exUser=  'UserComment';
-
-  exLatRef='GPSLatitudeRef';                           {'N' = North; 'S' = South}
-  exLonRef='GPSLongitudeRef';                          {'E' = East; 'W' = West}
-  exRefN='N';
-  exRefS='S';
-  exRefE='E';
-  exRefW='W';
-  exLat=   'GPSLatitude';
-  exLon=   'GPSLongitude';
-  exAlt=   'GPSAltitude';
-  exAltRef='GPSAltitudeRef';                           {0 = Above Sea Level; 1 = Below Sea Level}
-
-{XMP tags}
+{XMP tags CGO3+}
   xmpCamYaw='CameraYaw';
   xmpCamPitch='CameraPitch';
   xmpCamRoll='CameraRoll';
   xmpGPSalt='GPSAltitude';
+
+{C23 / E90}
+  xmpAltRel='AboveHomeAltitude';
+  xmpGimbalYaw='GimbalYaw';
+  xmpGimbalPitch='GimbalPitch';
+  xmpGimbalRoll='GimbalRoll';
+//  xmpDroneYaw='DroneYaw';
+//  xmpDronePitch='DronePitch';
+//  xmpDronelRoll='DroneRoll';
+//  xmpGPSacch='GPSXYAccuracy';
+//  xmpGPSaccv='GPSZAccuracy';
 
 {File names}
   flog='FlightLog';
@@ -332,6 +326,12 @@ begin
   gridPictures.Rows[0].DelimitedText:=rsHeader;
   gridPictures.AutoSizeColumns;
   startpos:='';
+  {$IFDEF LINUX}                                       {Ubuntu Linux}
+    btnLogs.Height:=30;                                {Needs larger Speed buttons}
+    btnLogs.Width:= 30;
+    btnPics.Height:=30;
+    btnPics.Width:= 30;
+  {$ENDIF}
 end;
 
 procedure TForm1.ScanEnable;                           {Check if scanning is possible}
@@ -556,43 +556,13 @@ begin
   end;
 end;
 
-function GetEXIFtime(RdData: TImgInfo): TDateTime;     {Get date/time from EXIF}
-var TimeTag: TTag;
-begin
-  result:=0;                                           {Invalid date far in the past as default}
-  TimeTag:=RdData.ExifData.TagByName[exTime1];         {Try mostly used tag}
-  if TimeTag=nil then
-    TimeTag:=RdData.ExifData.TagByName[exTime2];       {Try another tag}
-  if TimeTag=nil then
-    TimeTag:=RdData.ExifData.TagByName[exTime3];
-  if TimeTag is TDateTimeTag then
-    result:=TDateTimeTag(TimeTag).AsDateTime;
-end;
-
-function GetXMPvalue(id, s: string): string;           {Read data between > and < }
-var i, n: integer;
-    gef: boolean;
-begin
-  result:='';
-  n:=pos('<xmp:'+id, s);                               {It must be a XMP tag}
-  if n>0 then begin
-    gef:=false;
-    for i:=n+length(id) to length(s) do begin
-      if s[i]='<' then break;
-      if gef then
-        result:=result+s[i];
-      if s[i]='>' then
-        gef:=true;
-    end;
-  end;
-end;
-
 function ClearXMP: TXMPdat;
 begin
-  result.pitch:='';                                        {Clear data set first}
+  result.pitch:='';                                    {Clear data set first}
   result.roll:='';
   result.yaw:='';
   result.alt:='';
+  result.altr:='';
 end;
 
 function ClearTXD: TEXdata;                            {Delete Telemetry data for EXIF}
@@ -693,12 +663,90 @@ http://ns.adobe.com/xap/1.0/
     <xmp:CameraPitch>-13.905984</xmp:CameraPitch>
     <xmp:CameraRoll>0.002856</xmp:CameraRoll>
   </rdf:RDF>
-<?xpacket end="w"?>  }
+<?xpacket end="w"?>
+
+------------------------------------------------------
+
+C23
+
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="YUNEEC Meta Data"
+    xmlns:tiff="http://ns.adobe.com/tiff/1.0/"
+    xmlns:exif="http://ns.adobe.com/exif/1.0/"
+    xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+    xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+    xmlns:drone-yuneec="http://www.yuneec.com/drone-yuneec/1.0/"
+   xmp:ModifyDate="2013-12-01"
+   xmp:CreateDate="2013-12-01"
+   tiff:Make="Yuneec"
+   tiff:Model="C23"
+   dc:format="image/jpg"
+   drone-yuneec:GPSAltitude="201.02"
+   drone-yuneec:AboveHomeAltitude="69.84"
+   drone-yuneec:DroneYaw="93.940002"
+   drone-yuneec:DronePitch="3.480000"
+   drone-yuneec:DroneRoll="4.740000"
+   drone-yuneec:GimbalYaw="92.680000"
+   drone-yuneec:GimbalPitch="-13.74000"
+   drone-yuneec:GimbalRoll="0.000000"
+   crs:Version="7.0"
+   crs:HasSettings="False"
+   crs:HasCrop="False"
+   crs:AlreadyApplied="False">
+  </rdf:Description>
+ </rdf:RDF>
+</x:xmpmeta>
+
+--------------------------------------------------------------
+E90
++   Camera:GPSXYAccuracy="5.000000"
++   Camera:GPSZAccuracy="10.000000"
+}
+
+function GetXMPvalue(id, s: string): string;           {Read data between > and < }
+var i, n: integer;
+    gef: boolean;
+begin
+  result:='';
+  n:=pos('<xmp:'+id, s);                               {It must be a XMP tag}
+  if n>0 then begin
+    gef:=false;
+    for i:=n+length(id)+4 to length(s) do begin
+      if s[i]='<' then break;
+      if gef then
+        result:=result+s[i];
+      if s[i]='>' then
+        gef:=true;
+    end;
+  end;
+end;
+
+function GetDRYvalue(id, s: string): string;           {Read data between > and < }
+var i, n: integer;
+    gef: boolean;
+begin
+  result:='';
+  n:=pos('drone-yuneec:'+id, s);                       {It must be a yuneec tag}
+  if n>0 then begin
+    gef:=false;
+    for i:=n+length(id)+12 to length(s) do begin
+      if s[i]='<' then break;
+      if gef then
+        result:=result+s[i];
+      if s[i]='>' then
+        gef:=true;
+    end;
+  end;
+end;
+
 
 function GetXMPdata(const fn: string): TXMPdat;        {Find XMP data in JPG file}
 var indat: TFileStream;
     i, nb: integer;
-    buf: array[0..8191] of byte;                       {Search in the first 8kByte}
+    buf: array[0..65535] of byte;                      {Search in the first 64 kByte}
     rawstr: string;
 begin
   result:=ClearXMP;
@@ -715,59 +763,20 @@ begin
         result.pitch:=GetXMPvalue(xmpCamPitch, rawstr);
         result.yaw:=GetXMPvalue(xmpCamYaw, rawstr);
         result.alt:=GetXMPvalue(xmpGPSalt, rawstr);
+        if result.Roll='' then                         {For C23 and better}
+          result.roll:=GetDRYvalue(xmpGimbalRoll, rawstr);
+        if result.pitch='' then
+          result.pitch:=GetDRYvalue(xmpGimbalPitch, rawstr);
+        if result.yaw='' then
+          result.yaw:=GetDRYvalue(xmpGimbalYaw, rawstr);
+        if result.alt='' then begin
+          result.alt:=GetDRYvalue(xmpGPSalt, rawstr);
+          result.altr:=GetDRYvalue(xmpAltRel, rawstr);
+        end;
       end;
     end;
   finally
     indat.Free;
-  end;
-end;
-
-function ReadTag(RdData: TImgInfo; TagName, ErrorMsg: string): string;
-var TagToRead: TTag;
-begin
-  result:=ErrorMsg;                                    {Error message}
-  TagToRead:=RdData.ExifData.TagByName[TagName];
-  if TagToRead<>nil then                               {Check if tag is available}
-    result:=TagToRead.AsString;
-end;
-
-function ReadFloat(RdData: TImgInfo; TagName: string): double;
-var TagToRead: TTag;
-begin
-  result:=0;
-  TagToRead:=RdData.ExifData.TagByName[TagName];
-  if TagToRead<>nil then                               {Check if tag is available}
-    result:=TagToRead.AsFloat;
-end;
-
-procedure WriteTagAsString(var WrData: TImgInfo;       {EXIF data set}
-                           TagName, NewValue: string;  {Tag name and new string}
-                           Overwrite: boolean=false);  {Name, value, allow}
-var WantedTag, InsertedTag: TTag;
-begin
-  WantedTag:=WrData.ExifData.TagByName[TagName];
-  if WantedTag=nil then begin                          {Check if tag is missing}
-    InsertedTag:=WrData.EXIFdata.AddTagByName(TagName);
-    InsertedTag.AsString:=NewValue;                    {Insert the nw value}
-  end else begin                                       {If tag was already there}
-    if Overwrite then
-      WantedTag.AsString:=NewValue;                    {Overwrite value if allowed}
-  end;
-end;
-
-procedure WriteTagAsFloat(var WrData: TImgInfo;        {EXIF data set}
-                          TagName: string;             {Tag name to write into}
-                          NewValue: double;            {New value}
-                          Overwrite: boolean=false);   {Name, value, allow}
-var WantedTag, InsertedTag: TTag;
-begin
-  WantedTag:=WrData.ExifData.TagByName[TagName];
-  if WantedTag=nil then begin                          {Check if tag is missing}
-    InsertedTag:=WrData.EXIFdata.AddTagByName(TagName);
-    InsertedTag.AsFloat:=NewValue;                     {Insert the nw value}
-  end else begin                                       {If tag was already there}
-    if Overwrite then
-      WantedTag.AsFloat:=NewValue;                     {Overwrite value if allowed}
   end;
 end;
 
@@ -788,7 +797,7 @@ var i: integer;
 begin
   if list.Count>0 then
     for i:=list.Count-1 downto 0 do
-      if list[i]='' then
+      if trim(list[i])='' then
         list.Delete(i);
 end;
 
@@ -812,7 +821,7 @@ begin
   end;
 end;
 
-function vTypeToStr(const v: integer): string;         {Transform vehicle type}
+function vTypeToStr(const v: integer): string;         {Convert vehicle type}
 begin
   result:='';
   case v of
@@ -821,11 +830,10 @@ begin
     3: result:='Blade 350QX';
     4: result:='Blade Chroma (380QX)';
     5: result:='Typhoon H';
-    6: result:='H920+';                                {Defined but never used}
   end;
 end;
 
-function vTypeToRC(const v: integer): string;
+function vTypeToRC(const v: integer): string;          {RC type depending on vehicle type}
 begin
   result:='';
   case v of
@@ -873,6 +881,11 @@ end;
 procedure TForm1.cbUpdateAltChange(Sender: TObject);
 begin
   gbCorrAlt.Enabled:=cbUpdateAlt.Checked;
+end;
+
+procedure TForm1.cbxLogsChange(Sender: TObject);
+begin
+  ScanEnable;
 end;
 
 procedure TForm1.ScanPics;                             {Scan picture directory}
@@ -996,38 +1009,17 @@ var
     end;
   end;
 
-  procedure EXIFaltitude(alt: double; ov: boolean);    {Cover negative valueus for Altitude}
-  begin
-    if alt<0 then
-      WriteTagAsString(aImgInfo, exAltRef, '1', ov)    {Below sea level}
-    else
-      WriteTagAsString(aImgInfo, exAltRef, '0', ov);   {Above sea level}
-    WriteTagAsFloat(aImgInfo, exAlt, abs(alt), ov);
-  end;
-
 {If lat/lon is not available in EXIF then use it from telemetry + altitude}
-  procedure TakePosFromtelemetry;
+  procedure TakePosFromTelemetry;
   begin
-    if ((picdat.lat=0) and (picdat.lon=0)) and
-       ((lat<>0) or (lon<>0)) then begin
+    if ((picdat.lat=0) and (picdat.lon=0)) and         {No coordinates in picture}
+       ((lat<>0) or (lon<>0)) then begin               {Valid coordinates from telemetry}
       picdat.lat:=lat;
       picdat.lon:=lon;
-
       if cbUpdateAlt.Checked then begin
-        fn:=exRefN;
-        if lat<0 then
-          fn:=exRefS;
-        WriteTagAsString(aImgInfo, exLatRef, fn, true);
-        WriteTagAsFloat(aImgInfo, exLat, lat, true);
-
-        fn:=exRefE;
-        if lon<0 then
-          fn:=exRefW;
-        WriteTagAsString(aImgInfo, exLonRef, fn, true);
-        WriteTagAsFloat(aImgInfo, exLon, lon, true);
+        WriteCoordinates(aImgInfo, lat, lon, true);
         gridPictures.Cells[3, i+1]:=capLogs;           {Overwritten by Telemetry}
-
-        EXIFaltitude(picdat.alt, true);
+        WriteAltitude(aImgInfo, picdat.alt, true);
         gridPictures.Cells[5, i+1]:=FormatFloat(altfrm, picdat.alt);
       end;
     end;
@@ -1038,7 +1030,11 @@ var
   begin
     if Gimbal.roll<>'' then begin                                               {JSON: XMPdata}
       outstr:=outstr+sep+le+'"XMPdata"'+dpID+startID+
-        strID+xmpGPSalt+strID+dpID+strID+Gimbal.alt+strID+sep+
+        strID+xmpGPSalt+strID+dpID+strID+Gimbal.alt+strID+sep;
+      if Gimbal.altr<>'' then
+        outstr:=outstr+
+        strID+xmpAltRel+strID+dpID+strID+Gimbal.altr+strID+sep;
+      outstr:=outstr+
         strID+xmpCamYaw+strID+dpID+strID+Gimbal.yaw+strID+sep+
         strID+xmpCamPitch+strID+dpID+strID+Gimbal.pitch+strID+sep+
         strID+xmpCamRoll+strID+dpID+strID+Gimbal.roll+strID+endID;
@@ -1163,7 +1159,7 @@ var
   begin
     result:='';
     if cbKeepComment.Checked then begin
-      result:=ReadTag(aImgInfo, exUser, '');
+      result:=ReadString(aImgInfo, exUser, '');
       if trim(result)<>'' then
         result:=LineEnding+result;
     end;
@@ -1175,7 +1171,7 @@ var
     WriteTagAsString(aImgInfo, exUser, outstr+KeepOrigUserComment, true);
     if cbUpdateAlt.Checked and
        (geoalt<>0) then begin
-      EXIFaltitude(picdat.alt, true);
+      WriteAltitude(aImgInfo, picdat.alt, true);
       gridPictures.Cells[5, i+1]:=FormatFloat(altfrm, picdat.alt);
     end;
   end;
@@ -1400,35 +1396,27 @@ begin
               if aImgInfo.HasEXIF then begin
                 try
                   picdat.zeit:=GetEXIFtime(aImgInfo);
-                  if picdat.zeit=0 then                {EXIF time not available (i.e. CGO)}
+                  if picdat.zeit<1 then                {EXIF time not available (i.e. CGO)}
                     picdat.zeit:=fdat;                 {Take file date time}
-                  picdat.lat:=ReadFloat(aImgInfo, exLat);
-                  picdat.lon:=ReadFloat(aImgInfo, exLon);
-                  cam:=ReadTag(aImgInfo, exCam, '');
+                  cam:=ReadString(aImgInfo, exModel, '');
 
 {List all picture files in info table}
                   gridPictures.Cells[1, i+1]:=FormatDateTime(timeformat, picdat.zeit);
-                  gridPictures.Cells[2, i+1]:=ReadTag(aImgInfo, exVersn, '0000');
-                  if (picdat.lat<>0) or (picdat.lon<>0) then
+                  gridPictures.Cells[2, i+1]:=ReadString(aImgInfo, exVersn, '0000');
+                  if ReadCoordinates(aImgInfo, picdat.lat, picdat.lon) then
                     gridPictures.Cells[3, i+1]:='EXIF'; {Valid coordinates in EXIF}
 
 {Handle only Yuneec picture files}
-                  if lowercase(ReadTag(aImgInfo, exMake, ''))=makefilter then begin
+                  if lowercase(ReadString(aImgInfo, exMake, ''))=makefilter then begin
                     picdat.telem:=FindDataLine(tlmlist, picdat.zeit, zl1);
                     if picdat.telem<>'' then begin     {Found time match}
 
 {Read lat/lon from EXIF and from telemetry to compare}
-                      fn:=uppercase(ReadTag(aImgInfo, exLatRef, exRefN));
-                      if (fn[1]=exRefS) and (picdat.lat>0) then
-                        picdat.lat:=-picdat.lat;       {Correct lat for southern hemisphere}
-                      fn:=uppercase(ReadTag(aImgInfo, exLatRef, exRefE));
-                      if (fn[1]=exRefW) and (picdat.lon>0) then
-                        picdat.lon:=-picdat.lon;       {Correct lon for western hemisphere}
                       splitlist.DelimitedText:=picdat.telem;
                       if not TryStrToFloat(splitlist[4], picdat.alt) or
                          (picdat.alt>maxalt) then      {Read altitude from telemetry}
                         picdat.alt:=defalt;
-                      picdat.alt:=picdat.Alt+geoalt;
+                      picdat.alt:=picdat.alt+geoalt;
                       if not TryStrToFloat(splitlist[5], lat) then
                         lat:=0;
                       if not TryStrToFloat(splitlist[6], lon) then
@@ -1542,6 +1530,11 @@ end;
 procedure TForm1.cbxLogsDblClick(Sender: TObject);     {Open FlightLog folder}
 begin
   OpenDocument(ExtractFilePath(cbxLogs.Text));
+end;
+
+procedure TForm1.cbxPicsChange(Sender: TObject);
+begin
+  ScanEnable;
 end;
 
 procedure TForm1.cbxPicsDblClick(Sender: TObject);     {Open picture folder}
