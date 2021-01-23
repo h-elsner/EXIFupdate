@@ -1214,6 +1214,7 @@ begin
   remlist:=TStringList.Create;
   remgpslist:=TStringList.Create;
   splitlist:=TStringList.Create;
+  aImgInfo:=TImgInfo.Create;
   screen.Cursor:=crHourGlass;
   mnSaveCSV.Enabled:=false;
   gridPictures.RowCount:=1;
@@ -1382,115 +1383,112 @@ begin
             fdat:=FileDateToDateTime(FileAge(filelist[i]));
             picdat.zeit:=fdat;                         {Will be overwritten by EXIF time}
             gridPictures.Cells[1, i+1]:=FormatDateTime(timeformat, picdat.zeit);
-            aImgInfo:=TImgInfo.Create;
             try
+              aImgInfo.LoadFromFile(filelist[i]);
+            except                                     {Error message data structure EXIF}
+              on e: Exception do begin
+                gridPictures.Cells[12, i+1]:=e.Message;
+                break;
+              end;
+            end;
+            splitlist.Clear;
+            splitlist.Delimiter:=sep;
+            splitlist.StrictDelimiter:=true;
+            if aImgInfo.HasEXIF then begin
               try
-                aImgInfo.LoadFromFile(filelist[i]);
-              except                                   {Error message data structure EXIF}
+                picdat.zeit:=GetEXIFtime(aImgInfo);
+                if picdat.zeit<1 then                  {EXIF time not available (i.e. CGO)}
+                  picdat.zeit:=fdat;                   {Take file date time}
+                cam:=ReadString(aImgInfo, exModel, '');
+
+{List all picture files in info table}
+                gridPictures.Cells[1, i+1]:=FormatDateTime(timeformat, picdat.zeit);
+                gridPictures.Cells[2, i+1]:=ReadString(aImgInfo, exVersn, '0000');
+                if ReadCoordinates(aImgInfo, picdat.lat, picdat.lon) then
+                  gridPictures.Cells[3, i+1]:='EXIF';   {Valid coordinates in EXIF}
+
+{Handle only Yuneec picture files}
+                if lowercase(ReadString(aImgInfo, exMake, ''))=makefilter then begin
+                  picdat.telem:=FindDataLine(tlmlist, picdat.zeit, zl1);
+                  if picdat.telem<>'' then begin         {Found time match}
+
+{Read lat/lon from EXIF and from telemetry to compare}
+                    splitlist.DelimitedText:=picdat.telem;
+                    if not TryStrToFloat(splitlist[4], picdat.alt) or
+                       (picdat.alt>maxalt) then          {Read altitude from telemetry}
+                      picdat.alt:=defalt;
+                    picdat.alt:=picdat.alt+geoalt;
+                    if not TryStrToFloat(splitlist[5], lat) then
+                      lat:=0;
+                    if not TryStrToFloat(splitlist[6], lon) then
+                      lon:=0;
+
+                    TakePosFromTelemetry;                {Missing coordinates in EXIF}
+
+{Handle matching pictures, edit and save it}
+                    vari:=DeltaCoord(lat, lon, picdat.lat, picdat.lon);
+                    if vari<=tbDelta.Max then            {Show variance only if in allowed area}
+                      gridPictures.Cells[4, i+1]:=FormatFloat(altfrm, vari*100);
+                    if vari<=tbDelta.Position/100 then begin
+                      gridPictures.Cells[6, i+1]:=AusgZeile(zl1);
+                      inc(zhl);                          {Count matches}
+
+                      outstr:=outstr+sep+le+'"CameraShoot"'+dpID+startID;       {JSON: Picture start}
+                      outstr:=outstr+le+'"SequenceNo"'+dpID+IntToStr(zhl);      {JSON: Number of the file}
+                      outstr:=outstr+le+sep+
+                              AusgData(tele, picdat.telem, zl1);                {JSON: Pic Telemetry}
+
+                      picdat.remot:=FindDataLine(remlist, picdat.zeit, zl2);
+                      if picdat.remot<>'' then begin
+                        outstr:=outstr+sep+le+AusgData(trem, picdat.remot, zl2); {JSON: Pic Remote}
+                        gridPictures.Cells[7, i+1]:=AusgZeile(zl2);
+                      end;
+
+                      picdat.regps:=FindDataLine(remGPSlist, picdat.zeit, zl3);
+                      if picdat.regps<>'' then begin
+                        outstr:=outstr+sep+le+AusgData(tgps, picdat.regps, zl3); {JSON: Pic RemoteGPS}
+                        gridPictures.Cells[8, i+1]:=AusgZeile(zl3);
+                      end;
+
+{Delta values between the pictures}
+                      dist:=DeltaCoord(ldat.lat, ldat.lon, picdat.lat, picdat.lon);
+                      bear:=Bearing(ldat.lat, ldat.lon, picdat.lat, picdat.lon);
+                      diffalt:=picdat.alt-ldat.alt;
+                      outstr:=outstr+sep+le+'"DistanceToPreviousPosition"'+
+                              dpID+FormatFloat(altfrm, dist);                   {JSON: Distance}
+                      outstr:=outstr+sep+le+'"Bearing"'+
+                              dpID+FormatFloat(altfrm, bear);                   {JSON: Bearing}
+                      outstr:=outstr+sep+le+'"Ascent"'+
+                              dpID+FormatFloat(altfrm, diffalt);                {JSON: Ascent}
+                      ldat:=picdat;                    {Save current as previous dataset}
+
+                      WriteXMPdata;
+                      outstr:=outstr+endID+endID;                               {JSON: End Picture, end all}
+
+                      WriteEXIFdata;                   {Write EXIF data}
+                      SaveJSONfiles;                   {Create JSON data as file}
+                      SaveEXIFdata;                    {Save EXIF to file, possibly backup}
+
+                      if mName<>'' then                {Model name}
+                        gridPictures.Cells[9, i+1]:=mName;
+                      if addtxt<>'' then
+                        gridPictures.Cells[11, i+1]:=addtxt;
+                    end else
+                      gridPictures.Cells[6, i+1]:=rsNo; {No correlation in position}
+
+                  end else
+                    gridPictures.Cells[6, i+1]:=rsNo;  {No time correlation found}
+
+                end;                                   {End camera filter}
+
+              except                                   {Error message EXIF}
                 on e: Exception do
                   gridPictures.Cells[12, i+1]:=e.Message;
               end;
-              splitlist.Clear;
-              splitlist.Delimiter:=sep;
-              splitlist.StrictDelimiter:=true;
-              if aImgInfo.HasEXIF then begin
-                try
-                  picdat.zeit:=GetEXIFtime(aImgInfo);
-                  if picdat.zeit<1 then                {EXIF time not available (i.e. CGO)}
-                    picdat.zeit:=fdat;                 {Take file date time}
-                  cam:=ReadString(aImgInfo, exModel, '');
 
-{List all picture files in info table}
-                  gridPictures.Cells[1, i+1]:=FormatDateTime(timeformat, picdat.zeit);
-                  gridPictures.Cells[2, i+1]:=ReadString(aImgInfo, exVersn, '0000');
-                  if ReadCoordinates(aImgInfo, picdat.lat, picdat.lon) then
-                    gridPictures.Cells[3, i+1]:='EXIF'; {Valid coordinates in EXIF}
+            end else
+              gridPictures.Cells[2, i+1]:=rsNo;        {No EXIF data}
 
-{Handle only Yuneec picture files}
-                  if lowercase(ReadString(aImgInfo, exMake, ''))=makefilter then begin
-                    picdat.telem:=FindDataLine(tlmlist, picdat.zeit, zl1);
-                    if picdat.telem<>'' then begin     {Found time match}
-
-{Read lat/lon from EXIF and from telemetry to compare}
-                      splitlist.DelimitedText:=picdat.telem;
-                      if not TryStrToFloat(splitlist[4], picdat.alt) or
-                         (picdat.alt>maxalt) then      {Read altitude from telemetry}
-                        picdat.alt:=defalt;
-                      picdat.alt:=picdat.alt+geoalt;
-                      if not TryStrToFloat(splitlist[5], lat) then
-                        lat:=0;
-                      if not TryStrToFloat(splitlist[6], lon) then
-                        lon:=0;
-
-                      TakePosFromTelemetry;            {Missing coordinates in EXIF}
-
-{Handle matching pictures, edit and save it}
-                      vari:=DeltaCoord(lat, lon, picdat.lat, picdat.lon);
-                      if vari<=tbDelta.Max then        {Show variance only if in allowed area}
-                        gridPictures.Cells[4, i+1]:=FormatFloat(altfrm, vari*100);
-                      if vari<=tbDelta.Position/100 then begin
-                        gridPictures.Cells[6, i+1]:=AusgZeile(zl1);
-                        inc(zhl);                      {Count matches}
-
-                        outstr:=outstr+sep+le+'"CameraShoot"'+dpID+startID;     {JSON: Picture start}
-                        outstr:=outstr+le+'"SequenceNo"'+dpID+IntToStr(zhl);    {JSON: Number of the file}
-                        outstr:=outstr+le+sep+
-                                AusgData(tele, picdat.telem, zl1);              {JSON: Pic Telemetry}
-
-                        picdat.remot:=FindDataLine(remlist, picdat.zeit, zl2);
-                        if picdat.remot<>'' then begin
-                          outstr:=outstr+sep+le+AusgData(trem, picdat.remot, zl2); {JSON: Pic Remote}
-                          gridPictures.Cells[7, i+1]:=AusgZeile(zl2);
-                        end;
-
-                        picdat.regps:=FindDataLine(remGPSlist, picdat.zeit, zl3);
-                        if picdat.regps<>'' then begin
-                          outstr:=outstr+sep+le+AusgData(tgps, picdat.regps, zl3); {JSON: Pic RemoteGPS}
-                          gridPictures.Cells[8, i+1]:=AusgZeile(zl3);
-                        end;
-
-{Delta values between the pictures}
-                        dist:=DeltaCoord(ldat.lat, ldat.lon, picdat.lat, picdat.lon);
-                        bear:=Bearing(ldat.lat, ldat.lon, picdat.lat, picdat.lon);
-                        diffalt:=picdat.alt-ldat.alt;
-                        outstr:=outstr+sep+le+'"DistanceToPreviousPosition"'+
-                                dpID+FormatFloat(altfrm, dist);                 {JSON: Distance}
-                        outstr:=outstr+sep+le+'"Bearing"'+
-                                dpID+FormatFloat(altfrm, bear);                 {JSON: Bearing}
-                        outstr:=outstr+sep+le+'"Ascent"'+
-                                dpID+FormatFloat(altfrm, diffalt);              {JSON: Ascent}
-                        ldat:=picdat;                  {Save current as previous dataset}
-
-                        WriteXMPdata;
-                        outstr:=outstr+endID+endID;                             {JSON: End Picture, end all}
-
-                        WriteEXIFdata;                 {Write EXIF data}
-                        SaveJSONfiles;                 {Create JSON data as file}
-                        SaveEXIFdata;                  {Save EXIF to file, possibly backup}
-
-                        if mName<>'' then              {Model name}
-                          gridPictures.Cells[9, i+1]:=mName;
-                        if addtxt<>'' then
-                          gridPictures.Cells[11, i+1]:=addtxt;
-                      end else
-                        gridPictures.Cells[6, i+1]:=rsNo;  {No correlation in position}
-
-                    end else
-                      gridPictures.Cells[6, i+1]:=rsNo;    {No time correlation found}
-
-                  end;                                 {End camera filter}
-
-                except                                 {Error message EXIF}
-                  on e: Exception do
-                    gridPictures.Cells[12, i+1]:=e.Message;
-                end;
-
-              end else
-                gridPictures.Cells[2, i+1]:=rsNo;      {No EXIF data}
-
-            finally
-              aImgInfo.Free;
-            end;
             CreateLogData;                             {One dataset log per picture}
           end;                                         {Actions per picture ended}
 
@@ -1522,6 +1520,7 @@ begin
     remlist.Free;
     remgpslist.Free;
     splitlist.Free;
+    aImgInfo.Free;
     Screen.Cursor:=crDefault;
   end;
 
