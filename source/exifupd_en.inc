@@ -41,9 +41,21 @@ resourcestring
   hntGravity='Select preferred gravity model for correction value';
   capGitHub='GitHub repository';
   capManual='User manual';
+  capFile='File';
+  capTools='Tools';
+  capHelp='Help';
+  capAbout='About...';
+
+  capObtain='Obtain from internet';
+  hntObtain='Call webservice "GeoidEval" to get geoid undulation for lat/lon location.';
+  capCopy='Copy';
+  capResult='Result from GeoidEval';
+  capClip='Copy result to clipboard';
+  capResFile='Save result as file...';
+  capCancel='Cancel';
 
   capKeepComment='Keep original UserComment';
-  hntKeepComment='Keep original user comment in EXIF as part of UserComment';
+  hntKeepComment='Keep originaluser comment in EXIF as part of UserComment';
   hntMemo='Text with additional info in EXIF as part of UserComment';
   capSetInfo='AdditionalText allowed';
   hntSetInfo='Add free text to UserComment in EXIF meta data';
@@ -58,13 +70,15 @@ resourcestring
 
   rsNo='no';
   rsYes='done';
+  rsInvalidCrd='Invalid coordinates';
 
   rsExtFilter='CSV files (default)|*.csv|Text files|*.txt|All files|*.*';
   rsNoFiles='No picture files found';
   rsNoFlight='Take off not detected';
   rsMissLog='Missing FlightLog';
-  rssavedTo='Saved to';
-  rsfailDir='Failed to create folder';
+  rsSavedTo='Saved to';
+  rsFailDir='Failed to create folder';
+  rsNoResponse='No response from internet';
 
   rgitem0='Single mode';
   rgitem1='Team mode main';

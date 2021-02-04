@@ -47,9 +47,9 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Buttons, ComCtrls, XMLPropStorage, Grids, fileutil, IpHtml, Ipfilebroker,
-  Iphttpbroker, dateutils, math, lclintf, Menus, fpeMetaData, fpeExifData,
-  exifstuff, clipbrd, MaskEdit, opensslsockets;
+  Buttons, ComCtrls, XMLPropStorage, Grids, fileutil, dateutils, math,
+  lclintf, Menus, fpeMetaData, fpeExifData, exifstuff, clipbrd, MaskEdit,
+  geoideval1, Iphttpbroker, opensslsockets;
 
 type                                                   {Data record for FlightLog data}
   TEXdata = record
@@ -93,7 +93,8 @@ type
     gbFiles: TGroupBox;
     gbCorrAlt: TGroupBox;
     ImageList: TImageList;
-    iproHTMLin: TIpHttpDataProvider;
+    iproHTTPin: TIpHttpDataProvider;
+    lblMeter: TLabel;
     lblGitHub: TLabel;
     lblManual: TLabel;
     lbeGeoid: TLabeledEdit;
@@ -101,7 +102,24 @@ type
     lblLogs: TLabel;
     lblPics: TLabel;
     lblVariance: TLabel;
+    MainMenu1: TMainMenu;
     Memo1: TMemo;
+    mnGeoEval: TMenuItem;
+    mnSave: TMenuItem;
+    mnSettings: TMenuItem;
+    mnTools: TMenuItem;
+    mnAbout: TMenuItem;
+    N5: TMenuItem;
+    mnGitHub: TMenuItem;
+    mnManual: TMenuItem;
+    mnHelp: TMenuItem;
+    N4: TMenuItem;
+    mnScan1: TMenuItem;
+    mnClose: TMenuItem;
+    N2: TMenuItem;
+    mnLogs: TMenuItem;
+    mnFile: TMenuItem;
+    mnPics: TMenuItem;
     N3: TMenuItem;
     N1: TMenuItem;
     mnScan: TMenuItem;
@@ -126,6 +144,7 @@ type
     tabMain: TTabSheet;
     tabSettings: TTabSheet;
     tbDelta: TTrackBar;
+    Timer1: TTimer;
     XMLPropStorage1: TXMLPropStorage;
     procedure btnCloseClick(Sender: TObject);
     procedure btnLogsClick(Sender: TObject);
@@ -140,34 +159,41 @@ type
     procedure edControllerDblClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure lbeGeoidDblClick(Sender: TObject);
     procedure lblGitHubClick(Sender: TObject);
     procedure lblGitHubMouseEnter(Sender: TObject);
     procedure lblGitHubMouseLeave(Sender: TObject);
     procedure lblManualClick(Sender: TObject);
     procedure lblManualMouseEnter(Sender: TObject);
     procedure lblManualMouseLeave(Sender: TObject);
+    procedure mnAboutClick(Sender: TObject);
     procedure mnClearClick(Sender: TObject);
+    procedure mnCloseClick(Sender: TObject);
+    procedure mnGeoEvalClick(Sender: TObject);
     procedure mnLoadClick(Sender: TObject);
     procedure mnPasteClick(Sender: TObject);
     procedure mnSaveCSVClick(Sender: TObject);
+    procedure mnScan1Click(Sender: TObject);
     procedure mnScanClick(Sender: TObject);
     procedure mnSetInfoClick(Sender: TObject);
+    procedure mnSettingsClick(Sender: TObject);
     procedure tbDeltaChange(Sender: TObject);
+    procedure GetInetList(const url: string; var list: TStringList);
+    procedure Timer1Timer(Sender: TObject);
   private
     procedure ScanPics;                                {Scan picture directory}
     procedure ShowSliderPos;                           {Show position of the slider}
     procedure ScanEnable;                              {Check if scanning is possible}
-    function  FindLineHTTP(const url, substr, errmsg: string): string;
-  public
+   public
 
   end;
 
 var
   Form1: TForm1;
-  startpos: string;
 
 const
+  appversion='V1.0';
+  builddt='2021-02-02';
+
   makefilter='yuneec';                                 {Proper works only for Yuneec Typhoon H}
   altfrm='0.00';
   coordfrm='0.000000';
@@ -185,14 +211,13 @@ const
   tab6='      ';
   usID='_';
   sep=',';                                             {CSV data separator}
-  ziff=['0'..'9'];                                     {Valid digits}
   cext='.csv';
   fmode='f_mode';
   idleID='16';                                         {f-mode 16, Initialization}
   txtpart=12;                                          {Length partially displayed text}
   le=LineEnding;                                       {Better readable for tests}
 //  le='';                                               {No line breaks}
-  urlGeoid='https://geographiclib.sourceforge.io/cgi-bin/GeoidEval';
+  hotky='&';
   githublink='https://github.com/h-elsner/EXIFupdate';
   manual='Manual.pdf';
 
@@ -247,13 +272,15 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);          {Initialize GUI captions}
+var i: integer;
 begin
   Caption:=capForm;
-  btnScan.Caption:='&'+capScan;
+  btnScan.Caption:=hotky+capScan;
   btnScan.Hint:=hntScan;
   btnScan.Enabled:=false;
   mnScan.Enabled:=false;
-  btnClose.Caption:='&'+capClose;
+  mnScan1.Enabled:=false;
+  btnClose.Caption:=hotky+capClose;
   btnClose.Hint:=capClose;
   btnLogs.Hint:=hntLogs;
   btnPics.Hint:=hntPics;
@@ -305,6 +332,19 @@ begin
   mnSaveCSV.Caption:=capSaveCSV;
   mnSaveCSV.Enabled:=false;
   mnScan.Caption:=capScan;
+  mnScan1.Caption:=capScan;
+  mnFile.Caption:=hotky+capFile;
+  mnTools.Caption:=hotky+capTools;
+  mnHelp.Caption:=hotky+capHelp;
+  mnScan.Caption:=capScan;
+  mnManual.Caption:=capManual;
+  mnGitHub.Caption:=capGitHub;
+  mnAbout.Caption:=capAbout;
+  mnClose.Caption:=capClose;
+  mnSave.Caption:=capSaveTab;
+  mnPics.Caption:=capDirDialog;
+  mnLogs.Caption:=capOpenDialog;
+  mnSettings.Caption:=capSettings;
 
   rgController.Caption:=capController;
   rgController.Hint:=capController;
@@ -315,6 +355,8 @@ begin
   rgController.Items[4]:=rgitem4;
   edController.TextHint:=capController;
   edController.Hint:=rgitem4+tab1+capController;
+  for i:=Low(EGMs) to High(EGMs) do                   {Fill Gravity models}
+    rgGravity.Items.Add(EGMs[i]);
 
   OpenDialog.Title:=capOpenDialog;
   OpenDialog.Filter:=rsExtFilter;
@@ -325,7 +367,6 @@ begin
   gridPictures.Rows[0].StrictDelimiter:=true;
   gridPictures.Rows[0].DelimitedText:=rsHeader;
   gridPictures.AutoSizeColumns;
-  startpos:='';
   {$IFDEF LINUX}                                       {Ubuntu Linux}
     btnLogs.Height:=30;                                {Needs larger Speed buttons}
     btnLogs.Width:= 30;
@@ -339,6 +380,7 @@ begin
   btnScan.Enabled:=FileExists(cbxLogs.Text) and
                    DirectoryExists(cbxPics.Text);
   mnScan.Enabled:=btnScan.Enabled;
+  mnScan1.Enabled:=mnScan.Enabled;
 end;
 
 procedure TForm1.FormShow(Sender: TObject);            {At start after loading session properties}
@@ -347,15 +389,6 @@ begin
   Splitter1.Update;
   mnSetInfo.Checked:=cbAddText.Checked;
   gbCorrAlt.Enabled:=cbUpdateAlt.Checked;
-end;
-
-{https://geographiclib.sourceforge.io/cgi-bin/GeoidEval?input=43.44+23.43&option=Submit}
-procedure TForm1.lbeGeoidDblClick(Sender: TObject);    {Call Geoid Eval}
-begin
-  if startpos<>'' then
-    OpenURL(urlGeoid+'?input='+startpos+'&option=Submit')
-  else
-    OpenURL(urlGeoid);
 end;
 
 procedure TForm1.lblGitHubClick(Sender: TObject);      {Open GitHub repo}
@@ -390,9 +423,30 @@ begin
   lblManual.Font.Style:=lblManual.Font.Style-[fsBold];
 end;
 
+procedure TForm1.mnAboutClick(Sender: TObject);        {About box}
+begin
+  if MessageDlg(ChangeFileExt(ExtractFileName(Application.ExeName), '')+
+                tab1+appversion+sLineBreak+
+                'Build '+builddt+sLineBreak+sLineBreak+capForm,
+                mtInformation,[mbHelp, mbOK],0)=mrNone then
+    OpenDocument(lblManual.Hint);
+end;
+
 procedure TForm1.mnClearClick(Sender: TObject);        {Clear text}
 begin
   Memo1.Lines.Clear;
+end;
+
+procedure TForm1.mnCloseClick(Sender: TObject);        {Menu close}
+begin
+  Close;
+end;
+
+procedure TForm1.mnGeoEvalClick(Sender: TObject);      {GUI for GeoidEval}
+begin
+  mode:=rgGravity.ItemIndex;
+  Timer1.Enabled:=true;
+  frmGeoidEval.Show;
 end;
 
 procedure TForm1.mnLoadClick(Sender: TObject);         {Text load from File}
@@ -421,6 +475,11 @@ begin
   end;
 end;
 
+procedure TForm1.mnScan1Click(Sender: TObject);
+begin
+  ScanPics;
+end;
+
 procedure TForm1.mnScanClick(Sender: TObject);         {Menu: Same as Scan button}
 begin
   ScanPics;
@@ -430,6 +489,11 @@ procedure TForm1.mnSetInfoClick(Sender: TObject);      {Allow/disallow Additiona
 begin
   mnSetInfo.Checked:=not mnSetInfo.Checked;
   cbAddText.Checked:=mnSetInfo.Checked;
+end;
+
+procedure TForm1.mnSettingsClick(Sender: TObject);     {Switch to settings}
+begin
+  pcTabs.ActivePage:=tabSettings;
 end;
 
 procedure TForm1.ShowSliderPos;                        {Show position of the slider}
@@ -575,84 +639,6 @@ begin
   result.alt:=defalt;
 end;
 
-function FilterValue(s: string; p: integer=1): string; {Copy the first float string part}
-var i: integer;
-    dot: boolean;
-begin
-  result:='';
-  dot:=true;
-  if length(s)>p then begin
-    for i:=p to length(s) do begin
-      if (s[i] in ziff) or (s[i]='-') then             {Collect digits}
-        result:=result+s[i];
-      if dot and                                       {Take only first dot}
-         ((s[i]='.') or (s[i]=',')) then begin
-        result:=result+DefaultFormatSettings.DecimalSeparator;
-        dot:=false;
-      end;
-    end;
-  end else
-    result:=altfrm;
-end;
-
-{Output GeoidEval (https://geographiclib.sourceforge.io/cgi-bin/GeoidEval):
-  <a href="http://earth-info.nga.mil/GandG/wgs84/gravitymod/egm2008">EGM2008</a> = <font color="blue">42.5261</font>
-  <a href="http://earth-info.nga.mil/GandG/wgs84/gravitymod/egm96/egm96.html">EGM96</a>   = <font color="blue">41.4735</font>
-  <a href="http://earth-info.nga.mil/GandG/wgs84gravitymod/wgs84_180/wgs84_180.html">EGM84</a>   = <font color="blue">41.8857</font></pre></font>
-}
-function ExtractHeight(s: string): string;             {Extract delta heigth from geoid}
-begin
-  result:=altfrm;                                      {Default: 0.00}
-  if length(s)>100 then                                {Correction value is somewhere at the end of the line}
-    result:=FilterValue(s, 100);
-end;
-
-function CleanGeoid(txt: string; var geo: double): string;
-begin
-  geo:=0;
-  result:=FilterValue(txt, 1);
-  if (result='') or (not TryStrToFloat(result, geo)) then
-    result:=altfrm;
-end;
-
-function TForm1.FindLineHTTP(const url, substr, errmsg: string): string;
-var strm: TStream;                                     {Find a line in HTML file from Internet}
-    inlist: TStringList;
-    i: integer;
-    ct: string;
-begin
-  result:='';                                          {Default: Empty string}
-  if length(url)>8 then begin
-    inlist:=TStringList.Create;
-    ct:='';
-    result:=errmsg;
-    try
-      try
-        if iproHTMLin.CheckURL(url, ct) then           {Test the URL if connection is possible}
-          strm:=iproHTMLin.DoGetStream(url);           {Download file to stream}
-      except
-        on e: Exception do begin
-          result:=e.Message;                           {Error message as result}
-          exit;
-        end;
-      end;
-      if strm.Size>100 then                            {Check if download was successful}
-        inlist.LoadFromStream(strm);
-      if inlist.count>0 then begin                     {Check if input may be usable}
-        for i:=0 to inlist.count-1 do begin            {Find keyword in list}
-          if pos(substr, inlist[i])>0 then begin
-            result:=inlist[i];                         {Result is string where the keywors is in}
-            break;                                     {Finish when first hit was found}
-          end;
-        end;
-      end;
-    finally
-      inlist.Free;
-    end;
-  end;
-end;
-
-
 {XMP data in CGO3+ picture files:
 
 http://ns.adobe.com/xap/1.0/
@@ -742,6 +728,13 @@ begin
   end;
 end;
 
+function CleanGeoid(txt: string; var geo: double): string;
+begin
+  geo:=0;
+  result:=FilterValue(txt, 1);
+  if (result='') or (not TryStrToFloat(result, geo)) then
+    result:=altfrm;
+end;
 
 function GetXMPdata(const fn: string): TXMPdat;        {Find XMP data in JPG file}
 var indat: TFileStream;
@@ -888,6 +881,36 @@ begin
   ScanEnable;
 end;
 
+procedure TForm1.GetInetList(const url: string; var list: TStringList);
+var strm: TStream;                                     {Find a line in HTML file from Internet}
+    ct: string;
+begin
+  list.Clear;
+  ct:='';
+  if length(url)>8 then begin
+    try
+      if iproHTTPin.CheckURL(url, ct) then             {Test the URL if connection is possible}
+        strm:=iproHTTPin.DoGetStream(url);             {Download file to stream}
+    except
+      on e: Exception do begin
+        list.Text:=e.Message;                          {Error message as result}
+        exit;
+      end;
+    end;
+    if strm.Size>100 then                              {Check if download was successful}
+      list.LoadFromStream(strm);
+  end;
+end;
+
+procedure TForm1.Timer1Timer(Sender: TObject);         {Abfrage}
+begin
+  if output<>'' then begin
+    lbeGeoid.Text:=output;
+  end;
+  if not frmGeoidEval.Visible then
+    Timer1.Enabled:=false;
+end;
+
 procedure TForm1.ScanPics;                             {Scan picture directory}
 var
   dsepdef: char;
@@ -896,7 +919,7 @@ var
   filelist, tlmlist, splitlist, remlist, remgpslist, loglist: TStringList;
   aImgInfo: TImgInfo;
   stdat, picdat, ldat: TEXdata;
-  flnum, flpath, mainpath, fn, mname, addtxt, RCrole, cam: string;
+  flnum, flpath, mainpath, fn, mname, addtxt, RCrole, cam, startpos: string;
   jsonstr, outstr: string;
   Gimbal: TXMPdat;
   fdat: TDateTime;
@@ -1278,9 +1301,10 @@ begin
                     FormatFloat(coordfrm, stdat.lon);  {for URL with cgi}
 
           if cbUpdateAlt.Checked and cbAutoGeoid.Checked then begin  {Find correction value for geoid from internet}
-            fn:=FindLineHTTP(urlGeoid+'?input='+startpos+'&option=Submit',
-                             '>'+rgGravity.Items[rgGravity.ItemIndex]+'<', '');
+            GetInetList(GeoidCgiURL(startpos), remlist);
+            fn:=FindLineHTTP(rgGravity.Items[rgGravity.ItemIndex], remlist);
             lbeGeoid.Text:=ExtractHeight(fn);          {Update settings}
+            remlist.Clear;
           end;
 
           fn:=flpath+trem+PathDelim+trem+usID+flnum+cext;

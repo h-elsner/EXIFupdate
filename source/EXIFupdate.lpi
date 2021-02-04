@@ -35,7 +35,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="2">
+    <Units Count="3">
       <Unit0>
         <Filename Value="EXIFupdate.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -48,6 +48,13 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="EXIFupdate_main"/>
       </Unit1>
+      <Unit2>
+        <Filename Value="geoideval1.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmGeoidEval"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

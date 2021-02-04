@@ -24,9 +24,9 @@ resourcestring
   hntLog='Създайте регистрационен файл в CSV формат в папката на проекта';
   capGeoid='Geoid undulation';
   hntGeoid='Correction value from Ellipsoid to Geoid';
-  capSettings='Settings';
-  capMain='Protocol';
-  capEXIF='EXIF data handling';
+  capSettings='Настройки';
+  capMain='Протокол ';
+  capEXIF='Oбработка на данни EXIF';
   capFiles='File handling';
   capUpdateAlt='Update altitude';
   hntUpdateAlt='Correct altitude to absolute altitude instead of reltive altitude';
@@ -40,7 +40,19 @@ resourcestring
   capGravity='Gravity model';
   hntGravity='Select preferred gravity model for correction value';
   capGitHub='GitHub repository';
-  capManual='User manual';
+  capManual='Ръководство за употреба';
+  capFile='Файл';
+  capTools='Tools';
+  capHelp='Помогне';
+  capAbout='About...';
+
+  capObtain='Obtain from internet';
+  hntObtain='Call webservice "GeoidEval" to get geoid undulation for lat/lon location.';
+  capCopy='Copy';
+  capResult='Result from GeoidEval';
+  capClip='Copy result to clipboard';
+  capResFile='Save result as file...';
+  capCancel='Cancel';
 
   capKeepComment='Запазете оригиналния UserComment';
   hntKeepComment='Запазете оригиналния потребителски коментар в EXIF като част от UserComment';
@@ -57,13 +69,15 @@ resourcestring
               'Latitude,Longitude,Altitude [m],Ascent [m],Distance [m],Bearing [°]';
   rsNo='Не';
   rsYes='done';
+  rsInvalidCrd='Invalid coordinates';
 
   rsExtFilter='CSV файл (по умълчание)|*.csv|текст файл|*.txt|всички файлове|*.*';
   rsNoFiles='Не са намерени файлове със снимки';
   rsNoFlight='Не е намерен моментът на излитане';
   rsMissLog='Липсва FlightLog';
-  rsSavedTo='запазено като';
-  rsfailDir='Failed to create folder';
+  rsSavedTo='Saved to';
+  rsFailDir='Създаването на папка не бе успешно ';
+  rsNoResponse='Няма отговор от интернет ';
 
   rgitem0='Single mode';
   rgitem1='Team mode main';
