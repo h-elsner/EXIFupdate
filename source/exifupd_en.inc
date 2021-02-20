@@ -45,14 +45,14 @@ resourcestring
   capTools='Tools';
   capHelp='Help';
   capAbout='About...';
-
+(*
   capObtain='Obtain from internet';
   hntObtain='Call webservice "GeoidEval" to get geoid undulation for lat/lon location.';
   capCopy='Copy';
   capResult='Result from GeoidEval';
   capClip='Copy result to clipboard';
   capResFile='Save result as file...';
-  capCancel='Cancel';
+  capCancel='Cancel';    *)
 
   capKeepComment='Keep original UserComment';
   hntKeepComment='Keep originaluser comment in EXIF as part of UserComment';
@@ -85,4 +85,14 @@ resourcestring
   rgitem2='Team mode camera';
   rgitem3='Wizard';
   rgitem4='Self-defined';
+
+{Unit geoideval1}
+  capObtain='Obtain from internet';
+  hntObtain='Call webservice "GeoidEval" to get geoid undulation for lat/lon location.';
+  capCopy='Copy';
+  capResult='Result from GeoidEval';
+  capClip='Copy result to clipboard';
+  capResFile='Save result as file...';
+  capCancel='Cancel';
+
 

@@ -17,14 +17,12 @@
                    https://www.lazarus-ide.org/
 
  Needed component: https://sourceforge.net/p/lazarus-ccr/svn/HEAD/tree/components/fpexif/
-                   plus fpEXIF patch for Yuneec from wp_XYZ in r7965 (2021-01-17)
 
  EXIF tags:        https://exiftool.org/TagNames/EXIF.html
  JSON schema:      http://json-schema.org/
 
- Created: 2020-11-21 to 2021-01-17
+ Created: 2020-11-21 to 2021-02-19
 
- fpEXIF patch for Yuneec from wp_XYZ in r7965
  =======================================================================================
 
  Ellipsoid vs. geoid:
@@ -192,7 +190,7 @@ var
 
 const
   appversion='V1.0';
-  builddt='2021-02-02';
+  builddt='2021-02-19';
 
   makefilter='yuneec';                                 {Proper works only for Yuneec Typhoon H}
   altfrm='0.00';
@@ -437,19 +435,19 @@ begin
   Memo1.Lines.Clear;
 end;
 
-procedure TForm1.mnCloseClick(Sender: TObject);        {Menu close}
+procedure TForm1.mnCloseClick(Sender: TObject);        {Menu: Close}
 begin
   Close;
 end;
 
-procedure TForm1.mnGeoEvalClick(Sender: TObject);      {GUI for GeoidEval}
+procedure TForm1.mnGeoEvalClick(Sender: TObject);      {Menu: GUI for GeoidEval}
 begin
-  mode:=rgGravity.ItemIndex;
+  GeoidEvalMode:=rgGravity.ItemIndex;
   Timer1.Enabled:=true;
-  frmGeoidEval.Show;
+  frmGeoidEval.Show;                                   {Opens tool window}
 end;
 
-procedure TForm1.mnLoadClick(Sender: TObject);         {Text load from File}
+procedure TForm1.mnLoadClick(Sender: TObject);         {Menu: Text load from File}
 begin
   OpenDialog.Title:=capTextDialog;
   OpenDialog.FilterIndex:=2;                           {Switch to *.txt}
@@ -457,7 +455,7 @@ begin
     Memo1.Lines.LoadFromFile(OpenDialog.FileName);
 end;
 
-procedure TForm1.mnPasteClick(Sender: TObject);        {Paste to Memo}
+procedure TForm1.mnPasteClick(Sender: TObject);        {Menu: Paste to Memo}
 begin
   Memo1.text:=Clipboard.AsText;
 end;
@@ -485,13 +483,13 @@ begin
   ScanPics;
 end;
 
-procedure TForm1.mnSetInfoClick(Sender: TObject);      {Allow/disallow AdditionalInfo in JSON}
+procedure TForm1.mnSetInfoClick(Sender: TObject);      {Menu: Allow/disallow AdditionalInfo in JSON}
 begin
   mnSetInfo.Checked:=not mnSetInfo.Checked;
   cbAddText.Checked:=mnSetInfo.Checked;
 end;
 
-procedure TForm1.mnSettingsClick(Sender: TObject);     {Switch to settings}
+procedure TForm1.mnSettingsClick(Sender: TObject);     {Menu: Switch to Settings}
 begin
   pcTabs.ActivePage:=tabSettings;
 end;
@@ -902,10 +900,10 @@ begin
   end;
 end;
 
-procedure TForm1.Timer1Timer(Sender: TObject);         {Abfrage}
+procedure TForm1.Timer1Timer(Sender: TObject);         {Abfrage GeoidEval}
 begin
-  if output<>'' then begin
-    lbeGeoid.Text:=output;
+  if GeoidEvalValue<>''  then begin                    {Result as string from Tool}
+    lbeGeoid.Text:=GeoidEvalValue;
   end;
   if not frmGeoidEval.Visible then
     Timer1.Enabled:=false;
@@ -1428,9 +1426,13 @@ begin
 {List all picture files in info table}
                 gridPictures.Cells[1, i+1]:=FormatDateTime(timeformat, picdat.zeit);
                 gridPictures.Cells[2, i+1]:=ReadString(aImgInfo, exVersn, '0000');
-                if ReadCoordinates(aImgInfo, picdat.lat, picdat.lon) then
-                  gridPictures.Cells[3, i+1]:='EXIF';   {Valid coordinates in EXIF}
-
+                try
+                  if ReadCoordinates(aImgInfo, picdat.lat, picdat.lon) then
+                    gridPictures.Cells[3, i+1]:='EXIF';   {Valid coordinates in EXIF}
+                except
+                  picdat.lat:=0;
+                  picdat.lon:=0;
+                end;
 {Handle only Yuneec picture files}
                 if lowercase(ReadString(aImgInfo, exMake, ''))=makefilter then begin
                   picdat.telem:=FindDataLine(tlmlist, picdat.zeit, zl1);

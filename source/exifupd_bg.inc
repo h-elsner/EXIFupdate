@@ -46,14 +46,6 @@ resourcestring
   capHelp='Помогне';
   capAbout='About...';
 
-  capObtain='Obtain from internet';
-  hntObtain='Call webservice "GeoidEval" to get geoid undulation for lat/lon location.';
-  capCopy='Copy';
-  capResult='Result from GeoidEval';
-  capClip='Copy result to clipboard';
-  capResFile='Save result as file...';
-  capCancel='Cancel';
-
   capKeepComment='Запазете оригиналния UserComment';
   hntKeepComment='Запазете оригиналния потребителски коментар в EXIF като част от UserComment';
   hntMemo='Текст с допълнителна информация в EXIF като част от UserComment';
@@ -84,4 +76,14 @@ resourcestring
   rgitem2='Team mode camera';
   rgitem3='Wizard';
   rgitem4='Самоопределен';
+
+{Unit geoideval1}
+  capObtain='Obtain from internet';
+  hntObtain='Call webservice "GeoidEval" to get geoid undulation for lat/lon location.';
+  capCopy='Copy';
+  capResult='Result from GeoidEval';
+  capClip='Copy result to clipboard';
+  capResFile='Save result as file...';
+  capCancel='Cancel';
+
 

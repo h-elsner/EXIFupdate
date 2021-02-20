@@ -1,5 +1,34 @@
 unit geoideval1;                                       {GUI for web service GeoidEval}
 
+(* GUI to call web tool "GeoidEval". Result value from selected
+   Gravity model can be copied from GeoidEvalValue or, independent on Buttons,
+   from geresult. Variable geresult keeps the previous result value until
+   a new one was obtained.
+
+Usage (Example)
+---------------
+
+* Call tool (Init with Timer1.Enabled:=false);:
+
+  procedure TForm1.mnGeoEvalClick(Sender: TObject);    {GUI for GeoidEval}
+  begin
+    GeoidEvalMode:=rgGravity.ItemIndex;
+    Timer1.Enabled:=true;
+    frmGeoidEval.Show;                                 {Opens tool window}
+  end;
+
+* Take over result:
+
+  procedure TForm1.Timer1Timer(Sender: TObject);       {Abfrage GeoidEval}
+  begin
+    if GeoidEvalValue<>''  then begin                  {Result as string from Tool}
+      lbeGeoid.Text:=GeoidEvalValue;
+    end;
+    if not frmGeoidEval.Visible then
+      Timer1.Enabled:=false;
+  end;
+*)
+
 {$mode objfpc}{$H+}
 
 interface
@@ -41,14 +70,13 @@ type
 
 var
   frmGeoidEval: TfrmGeoidEval;
-  mode: integer;
-  output, op: string;                                  {output: Result, op: Transfer to Main form at Copy}
+  GeoidEvalMode: integer;                              {Selected Gravity model}
+  GeoidEvalValue, geresult: string;                    {Result value, GeoidEvalValue only filled by Copy button}
 
 const
   urlGeoid='https://geographiclib.sourceforge.io/cgi-bin/GeoidEval';
   gMapURL='https://www.google.de/maps/';
-  EGMs: array[0..2] of string =('EGM2008', 'EGM96', 'EGM84');
-  altfrm='0.00';                                       {Default altitude}
+  EGMs: array[0..2] of string =('EGM2008', 'EGM96', 'EGM84');  {Gravity model}
   ziff=['0'..'9'];                                     {Valid digits}
   gleich=' = ';
   gzoom='16';                                          {Zoom value for GoogleMaps}
@@ -71,8 +99,8 @@ procedure TfrmGeoidEval.FormShow(Sender: TObject);     {Initialization on restar
 begin
   lblURL.Font.Color:=clNavy;
   memoOut.Text:=capResult;
-  output:='';
-  op:='';
+  btnCopy.Enabled:=false;
+  GeoidEvalValue:='';                                  {Reset old result values}
 end;
 
 procedure TfrmGeoidEval.FormCreate(Sender: TObject);   {Initialization at first creation}
@@ -85,6 +113,9 @@ begin
   btnObtain.Hint:=hntObtain;
   mnFile.Caption:=capResFile;
   mnClipboard.Caption:=capClip;
+  GeoidEvalValue:='';
+  geresult:='';
+  GeoidEvalMode:=0;                                    {Default mode EGM2008}
 end;
 
 function URLGMap(lati, long: string): string;          {URL für Koordinate in Google Maps}
@@ -114,8 +145,7 @@ begin
         dot:=false;
       end;
     end;
-  end else
-    result:=altfrm;                                    {If nothing found default altitude}
+  end;
 end;
 
 {Output GeoidEval (https://geographiclib.sourceforge.io/cgi-bin/GeoidEval):
@@ -125,7 +155,7 @@ end;
 }
 function ExtractHeight(s: string): string;             {Extract delta heigth from geoid}
 begin
-  result:=altfrm;                                      {Default: 0.00}
+  result:='';
   if length(s)>100 then                                {Correction value is somewhere at the end of the line}
     result:=FilterValue(s, 100);
 end;
@@ -170,12 +200,12 @@ begin
   lblURL.Font.Style:=lblURL.Font.Style+[fsBold];
 end;
 
-procedure TfrmGeoidEval.lblURLMouseLeave(Sender: TObject);
+procedure TfrmGeoidEval.lblURLMouseLeave(Sender: TObject); {Animate link}
 begin
   lblURL.Font.Style:=lblURL.Font.Style-[fsBold];
 end;
 
-procedure TfrmGeoidEval.leLatDblClick(Sender: TObject); {Show in GoogleMaps}
+procedure TfrmGeoidEval.leLatDblClick(Sender: TObject);    {Show in GoogleMaps}
 begin
   if (leLat.Text<>'') and (leLon.Text<>'') then
     OpenURL(URLGMap(leLat.Text, leLon.Text));
@@ -194,40 +224,47 @@ begin
     memoOut.Lines.SaveToFile(FileDialog.FileName);
 end;
 
-procedure TfrmGeoidEval.lblURLClick(Sender: TObject);
+procedure TfrmGeoidEval.lblURLClick(Sender: TObject);  {Mark link as used}
 begin
   if OpenURL(urlGeoid)then
-    lblURL.Font.Color:=clPurple;
+    lblURL.Font.Color:=clPurple;                       {Change color}
 end;
 
-procedure TfrmGeoidEval.btnCloseClick(Sender: TObject);
+procedure TfrmGeoidEval.btnCloseClick(Sender: TObject); {Close without copy to result}
 begin
-  output:='';
-  Close;
+  GeoidEvalValue:='';                                  {Delete result, it was not copied}
+  Close;                                               {Close tool window, visible = false}
 end;
 
-procedure TfrmGeoidEval.btnCopyClick(Sender: TObject);
+procedure TfrmGeoidEval.btnCopyClick(Sender: TObject); {Button copy to take over the result}
+var x: double;                                         {Not used, only for test}
+    dsepdef: char;
 begin
-  if op<>'' then begin
-    ClipBoard.AsText:=memoOut.Text;
-    output:=op;
+  dsepdef:=DefaultFormatSettings.DecimalSeparator;     {Preparations}
+  DefaultFormatSettings.DecimalSeparator:='.';
+  if (geresult<>'') and                                {Result available}
+      TryStrToFloat(geresult, x) then begin            {Test if valid float string}
+    ClipBoard.AsText:=memoOut.Text;                    {Better not to keep clipboard}
+    GeoidEvalValue:=geresult;                          {Take over result to main unit}
   end;
+  DefaultFormatSettings.DecimalSeparator:=dsepdef;     {Get back original decimal separator}
   Close;
 end;
 
 {https://geographiclib.sourceforge.io/cgi-bin/GeoidEval?input=43.44+23.43&option=Submit}
 procedure TfrmGeoidEval.btnObtainClick(Sender: TObject); {Call web service GeoidEval}
-var w: double;
+var x: double;                                         {Not used, just to test float}
     lne: string;
     dsepdef: char;
     i: integer;
     inlist: TStringList;
 begin
-  dsepdef:=DefaultFormatSettings.DecimalSeparator;     {Preparations}
+  dsepdef:=DefaultFormatSettings.DecimalSeparator;   {Preparations}
   DefaultFormatSettings.DecimalSeparator:='.';
   memoOut.Lines.Clear;
+  geresult:='';
   if (leLat.Text<>'') and (leLon.Text<>'') and         {if coordinates available}
-      TryStrToFloat(leLat.Text, w) and TryStrToFloat(leLon.Text, w) then begin
+      TryStrToFloat(leLat.Text, x) and TryStrToFloat(leLon.Text, x) then begin
     inlist:=TstringList.Create;
     Screen.Cursor:=crHourGlass;
     GetHTML(GeoidCgiURL(leLat.Text+'+'+leLon.Text), inlist);  {get result page}
@@ -241,20 +278,22 @@ begin
           lne:=FindLineHTTP(EGMs[i], inlist);
           lne:=ExtractHeight(lne);
           memoOut.Lines.Add(Format('%0:-7s', [EGMs[i]])+gleich+lne+'m');
-          if i=mode then
-            op:=lne;
+          if (i=GeoidEvalMode) or
+             (i=0) then begin                          {Default Gravity model if nothing else was found}
+            geresult:=lne;
+          end;
         end;
-        btnCopy.Enabled:=(op<>'');
+        btnCopy.Enabled:=(geresult<>'');
       finally
         inlist.Free;
         screen.Cursor:=crDefault;
-      end;
+        DefaultFormatSettings.DecimalSeparator:=dsepdef; {Get back original decimal}
+      end;                                             {separator if somoeting went wrong}
     end else
       memoOut.Lines.Add(rsNoResponse);                 {No download was available}
 
   end else begin
     memoOut.Lines.Add(rsInvalidCrd);                   {No or invalid float for coordinates}
-//    OpenURL(urlGeoid);
   end;
   DefaultFormatSettings.DecimalSeparator:=dsepdef;     {Get back original decimal separator}
 end;

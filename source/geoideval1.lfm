@@ -1,7 +1,7 @@
 object frmGeoidEval: TfrmGeoidEval
-  Left = 1203
+  Left = 1224
   Height = 195
-  Top = 744
+  Top = 735
   Width = 440
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
