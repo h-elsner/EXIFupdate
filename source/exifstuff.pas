@@ -38,7 +38,7 @@ const
   exHeadingRef='GPSImgDirectionRef'; 	           {'M' = Magnetic North; 'T' = True North}
   exHeading='GPSImgDirectionRef';
 
-  myVersion='0220';                                {EXIF version if EXIF was newly created}
+  myVersion='0222';                                {EXIF version if EXIF was newly created}
 
 {Public functions and procedures}
   function ReadTime(var RdData: TImgInfo;          {TimeFormat defines time sting}
@@ -133,8 +133,15 @@ end;
 function ReadCoordinates(var RdData: TImgInfo; var nlat, nlon: double): boolean;
 begin
   result:=false;
-  nlat:=rdData.ExifData.GPSLatitude;
-  nlon:=rdData.ExifData.GPSLongitude;
+  try
+    nlat:=rdData.ExifData.GPSLatitude;
+    nlon:=rdData.ExifData.GPSLongitude;
+  except
+    on e: Exception do begin
+      nlat:=0;
+      nlon:=0;
+    end;
+  end;
   result:=(nlat<>0) or (nLon<>0);                  {Valid coordinates}
 end;
 

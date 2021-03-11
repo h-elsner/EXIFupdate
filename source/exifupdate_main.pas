@@ -564,7 +564,7 @@ var i: integer;
 begin
   result:='';
   gef:=false;
-  for i:=length(s) downto 1 do begin
+  for i:=s.length downto 1 do begin
     if s[i] in ziff then begin
       gef:=true;
       result:=s[i]+result;
@@ -698,7 +698,7 @@ begin
   n:=pos('<xmp:'+id, s);                               {It must be a XMP tag}
   if n>0 then begin
     gef:=false;
-    for i:=n+length(id)+4 to length(s) do begin
+    for i:=n+id.length+4 to s.length do begin
       if s[i]='<' then break;
       if gef then
         result:=result+s[i];
@@ -716,7 +716,7 @@ begin
   n:=pos('drone-yuneec:'+id, s);                       {It must be a yuneec tag}
   if n>0 then begin
     gef:=false;
-    for i:=n+length(id)+12 to length(s) do begin
+    for i:=n+id.length+12 to s.length do begin
       if s[i]='<' then break;
       if gef then
         result:=result+s[i];
@@ -885,7 +885,7 @@ var strm: TStream;                                     {Find a line in HTML file
 begin
   list.Clear;
   ct:='';
-  if length(url)>8 then begin
+  if url.length>8 then begin
     try
       if iproHTTPin.CheckURL(url, ct) then             {Test the URL if connection is possible}
         strm:=iproHTTPin.DoGetStream(url);             {Download file to stream}
@@ -973,7 +973,7 @@ var
         addtxt:=StringReplace(addtxt, '"', '''', [rfReplaceAll]);
         jsonstr:=jsonstr+'"AdditionalText"'+dpID+                               {JSON: Additional info from memo}
                  strID+addtxt+strID+sep+le;
-        if length(addtxt)>txtpart then
+        if addtxt.length>txtpart then
           addtxt:=copy(addtxt, 1, txtpart)+'...';      {Shorten AddText for protocol table}
 //        addtxt:=addtxt.Split([' '])[0]+'...';        {Optional only the first word}
       end;
@@ -1165,7 +1165,7 @@ var
         end;
       end;
       p:=0;
-      for k:=1 to length(fn) do                        {Fill with empty columns}
+      for k:=1 to fn.length do                         {Fill with empty columns}
         if fn[k]=sep then inc(p);
       if p<11 then
         for k:=p to 10 do
@@ -1426,22 +1426,17 @@ begin
 {List all picture files in info table}
                 gridPictures.Cells[1, i+1]:=FormatDateTime(timeformat, picdat.zeit);
                 gridPictures.Cells[2, i+1]:=ReadString(aImgInfo, exVersn, '0000');
-                try
-                  if ReadCoordinates(aImgInfo, picdat.lat, picdat.lon) then
-                    gridPictures.Cells[3, i+1]:='EXIF';   {Valid coordinates in EXIF}
-                except
-                  picdat.lat:=0;
-                  picdat.lon:=0;
-                end;
+                if ReadCoordinates(aImgInfo, picdat.lat, picdat.lon) then
+                  gridPictures.Cells[3, i+1]:='EXIF';  {Valid coordinates in EXIF}
 {Handle only Yuneec picture files}
                 if lowercase(ReadString(aImgInfo, exMake, ''))=makefilter then begin
                   picdat.telem:=FindDataLine(tlmlist, picdat.zeit, zl1);
-                  if picdat.telem<>'' then begin         {Found time match}
+                  if picdat.telem<>'' then begin       {Found time match}
 
 {Read lat/lon from EXIF and from telemetry to compare}
                     splitlist.DelimitedText:=picdat.telem;
                     if not TryStrToFloat(splitlist[4], picdat.alt) or
-                       (picdat.alt>maxalt) then          {Read altitude from telemetry}
+                       (picdat.alt>maxalt) then        {Read altitude from telemetry}
                       picdat.alt:=defalt;
                     picdat.alt:=picdat.alt+geoalt;
                     if not TryStrToFloat(splitlist[5], lat) then
@@ -1449,15 +1444,15 @@ begin
                     if not TryStrToFloat(splitlist[6], lon) then
                       lon:=0;
 
-                    TakePosFromTelemetry;                {Missing coordinates in EXIF}
+                    TakePosFromTelemetry;              {Missing coordinates in EXIF}
 
 {Handle matching pictures, edit and save it}
                     vari:=DeltaCoord(lat, lon, picdat.lat, picdat.lon);
-                    if vari<=tbDelta.Max then            {Show variance only if in allowed area}
+                    if vari<=tbDelta.Max then          {Show variance only if in allowed area}
                       gridPictures.Cells[4, i+1]:=FormatFloat(altfrm, vari*100);
                     if vari<=tbDelta.Position/100 then begin
                       gridPictures.Cells[6, i+1]:=AusgZeile(zl1);
-                      inc(zhl);                          {Count matches}
+                      inc(zhl);                        {Count matches}
 
                       outstr:=outstr+sep+le+'"CameraShoot"'+dpID+startID;       {JSON: Picture start}
                       outstr:=outstr+le+'"SequenceNo"'+dpID+IntToStr(zhl);      {JSON: Number of the file}

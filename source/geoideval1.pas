@@ -46,6 +46,7 @@ type
     btnCopy: TBitBtn;
     btnClose: TBitBtn;
     iproHTMLine: TIpHttpDataProvider;
+    lblUsage: TLabel;
     leLat: TLabeledEdit;
     leLon: TLabeledEdit;
     lblURL: TLabel;
@@ -107,6 +108,7 @@ procedure TfrmGeoidEval.FormCreate(Sender: TObject);   {Initialization at first 
 begin
   Caption:=capCorrAlt;
   lblURL.Caption:=urlGeoid;
+  lblUsage.Caption:=capUsage;
   btnClose.Caption:=capCancel;
   btnCopy.Caption:=capCopy;
   btnObtain.Caption:=capObtain;
@@ -135,8 +137,8 @@ var i: integer;
 begin
   result:='';
   dot:=true;
-  if length(s)>p then begin
-    for i:=p to length(s) do begin
+  if s.length>p then begin
+    for i:=p to s.length do begin
       if (s[i] in ziff) or (s[i]='-') then             {Collect digits}
         result:=result+s[i];
       if dot and                                       {Take only first dot}
@@ -156,7 +158,7 @@ end;
 function ExtractHeight(s: string): string;             {Extract delta heigth from geoid}
 begin
   result:='';
-  if length(s)>100 then                                {Correction value is somewhere at the end of the line}
+  if s.length>100 then                                 {Correction value is somewhere at the end of the line}
     result:=FilterValue(s, 100);
 end;
 
@@ -180,7 +182,7 @@ var strm: TStream;                                     {Find a line in HTML file
 begin
   list.Clear;
   ct:='';
-  if length(url)>8 then begin
+  if url.length>8 then begin
     try
       if iproHTMLine.CheckURL(url, ct) then            {Test the URL if connection is possible}
         strm:=iproHTMLine.DoGetStream(url);            {Download file to stream}

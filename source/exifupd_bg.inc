@@ -85,5 +85,6 @@ resourcestring
   capClip='Copy result to clipboard';
   capResFile='Save result as file...';
   capCancel='Cancel';
+  capUsage='Usage: alt.MSL = alt.WSG84 - GeoidEval.Result';
 
 

@@ -14,7 +14,7 @@ object Form1: TForm1
   Position = poDefaultPosOnly
   SessionProperties = 'cbAddText.Checked;cbBackup.Checked;cbEXIFwrite.Checked;cbJSON.Checked;cbKeepComment.Checked;cbLog.Checked;cbUpdateAlt.Checked;cbxLogs.ItemIndex;cbxLogs.Items;cbxLogs.Text;cbxPics.ItemIndex;cbxPics.Items;cbxPics.Text;edController.Text;Height;lbeGeoid.Text;Memo1.Height;Memo1.Lines;OpenDialog.FilterIndex;rgController.ItemIndex;tbDelta.Position;Width;WindowState;cbAutoGeoid.Checked;rgGravity.ItemIndex'
   ShowHint = True
-  LCLVersion = '2.0.10.0'
+  LCLVersion = '2.0.12.0'
   object Panel1: TPanel
     Left = 0
     Height = 88
@@ -133,10 +133,10 @@ object Form1: TForm1
     Height = 466
     Top = 88
     Width = 884
-    ActivePage = tabSettings
+    ActivePage = tabMain
     Align = alClient
     Images = ImageList
-    TabIndex = 1
+    TabIndex = 0
     TabOrder = 2
     object tabMain: TTabSheet
       Caption = 'tabMain'
@@ -145,7 +145,7 @@ object Form1: TForm1
       ImageIndex = 8
       object gridPictures: TStringGrid
         Left = 0
-        Height = 394
+        Height = 374
         Top = 64
         Width = 876
         Align = alClient

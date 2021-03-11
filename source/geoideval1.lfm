@@ -1,21 +1,21 @@
 object frmGeoidEval: TfrmGeoidEval
   Left = 1224
-  Height = 195
+  Height = 214
   Top = 735
   Width = 440
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
   Caption = 'GeoidEval'
-  ClientHeight = 195
+  ClientHeight = 214
   ClientWidth = 440
   OnCreate = FormCreate
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '2.0.10.0'
+  LCLVersion = '2.0.12.0'
   object lblURL: TLabel
-    Left = 24
+    Left = 16
     Height = 15
-    Top = 160
+    Top = 184
     Width = 34
     Caption = 'lblURL'
     Font.Color = clNavy
@@ -199,6 +199,14 @@ object frmGeoidEval: TfrmGeoidEval
     }
     OnClick = btnObtainClick
     TabOrder = 2
+  end
+  object lblUsage: TLabel
+    Left = 16
+    Height = 15
+    Top = 160
+    Width = 45
+    Caption = 'lblUsage'
+    ParentColor = False
   end
   object iproHTMLine: TIpHttpDataProvider
     Left = 208
