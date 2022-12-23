@@ -1,7 +1,7 @@
 object frmGeoidEval: TfrmGeoidEval
-  Left = 1224
+  Left = 1265
   Height = 214
-  Top = 735
+  Top = 747
   Width = 440
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
@@ -11,16 +11,15 @@ object frmGeoidEval: TfrmGeoidEval
   OnCreate = FormCreate
   OnShow = FormShow
   Position = poScreenCenter
-  LCLVersion = '2.0.12.0'
+  LCLVersion = '2.2.0.4'
   object lblURL: TLabel
     Left = 16
-    Height = 15
+    Height = 16
     Top = 184
-    Width = 34
+    Width = 40
     Caption = 'lblURL'
     Font.Color = clNavy
     Font.Style = [fsUnderline]
-    ParentColor = False
     ParentFont = False
     OnClick = lblURLClick
     OnMouseEnter = lblURLMouseEnter
@@ -28,26 +27,24 @@ object frmGeoidEval: TfrmGeoidEval
   end
   object leLat: TLabeledEdit
     Left = 16
-    Height = 23
+    Height = 27
     Top = 32
     Width = 88
-    EditLabel.Height = 15
+    EditLabel.Height = 16
     EditLabel.Width = 88
     EditLabel.Caption = 'Lat'
-    EditLabel.ParentColor = False
     TabOrder = 0
     TextHint = 'Latitude'
     OnDblClick = leLatDblClick
   end
   object leLon: TLabeledEdit
     Left = 112
-    Height = 23
+    Height = 27
     Top = 32
     Width = 88
-    EditLabel.Height = 15
+    EditLabel.Height = 16
     EditLabel.Width = 88
     EditLabel.Caption = 'Lon'
-    EditLabel.ParentColor = False
     TabOrder = 1
     TextHint = 'Longitude'
     OnDblClick = leLatDblClick
@@ -154,11 +151,14 @@ object frmGeoidEval: TfrmGeoidEval
     Height = 142
     Top = 8
     Width = 222
+    Font.Height = -11
     Font.Name = 'Courier New'
     Lines.Strings = (
       'memoOut'
     )
     OnDblClick = leLatDblClick
+    OnMouseWheelDown = memoOutMouseWheelDown
+    OnMouseWheelUp = memoOutMouseWheelUp
     ParentFont = False
     PopupMenu = PopupMenu1
     TabOrder = 5
@@ -202,11 +202,10 @@ object frmGeoidEval: TfrmGeoidEval
   end
   object lblUsage: TLabel
     Left = 16
-    Height = 15
+    Height = 16
     Top = 160
-    Width = 45
+    Width = 53
     Caption = 'lblUsage'
-    ParentColor = False
   end
   object iproHTMLine: TIpHttpDataProvider
     Left = 208

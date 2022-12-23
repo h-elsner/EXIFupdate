@@ -35,7 +35,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Buttons, lclintf, Iphttpbroker, opensslsockets, clipbrd, Menus;
+  Buttons, lclintf, Iphttpbroker, opensslsockets, clipbrd, Menus, Types;
 
 type
 
@@ -65,6 +65,10 @@ type
     procedure lblURLMouseEnter(Sender: TObject);
     procedure lblURLMouseLeave(Sender: TObject);
     procedure leLatDblClick(Sender: TObject);
+    procedure memoOutMouseWheelDown(Sender: TObject; Shift: TShiftState;
+      MousePos: TPoint; var Handled: Boolean);
+    procedure memoOutMouseWheelUp(Sender: TObject; Shift: TShiftState;
+      MousePos: TPoint; var Handled: Boolean);
     procedure mnClipboardClick(Sender: TObject);
     procedure mnFileClick(Sender: TObject);
   end;
@@ -213,6 +217,20 @@ begin
     OpenURL(URLGMap(leLat.Text, leLon.Text));
 end;
 
+procedure TfrmGeoidEval.memoOutMouseWheelDown(Sender: TObject;
+  Shift: TShiftState; MousePos: TPoint; var Handled: Boolean);
+begin
+  if ssCtrl in Shift then
+    memoOut.Font.Size:=memoOut.Font.Size-1;
+end;
+
+procedure TfrmGeoidEval.memoOutMouseWheelUp(Sender: TObject;
+  Shift: TShiftState; MousePos: TPoint; var Handled: Boolean);
+begin
+  if ssCtrl in Shift then
+    memoOut.Font.Size:=memoOut.Font.Size+1;
+end;
+
 procedure TfrmGeoidEval.mnClipboardClick(Sender: TObject);
 begin                                                  {Menu: Copy result to clipboard}
   Clipboard.AsText:=memoOut.Text;
@@ -274,7 +292,7 @@ begin
     if inlist.Count>0 then begin                       {If something was downloaded}
       memoOut.Lines.Add(leLat.EditLabel.Caption+gleich+leLat.Text);
       memoOut.Lines.Add(leLon.EditLabel.Caption+gleich+leLon.Text);
-      memoOut.Lines.Add('');
+      memoOut.Lines.Add(LineEnding);
       try
         for i:=Low(EGMs) to High(EGMs) do begin
           lne:=FindLineHTTP(EGMs[i], inlist);
