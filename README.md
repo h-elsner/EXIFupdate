@@ -1,6 +1,6 @@
 # EXIFupdate
 
-##Abstract
+## Abstract
 
 Update EXIF data of JPG/JPEG pictures from Yuneec Typhoon H (CGO3+)
 
@@ -35,9 +35,9 @@ Updated EXIF data in JPG pictures from CGO3+.
 
 All data will be written in EXIF “UserComment” as JSON to JPG/JPEG picture file. You can keep the original “UserComment” or overwrite it (default).
 
+## Notes
 
 Developed with Lazarus IDE 2.0.10   https://www.lazarus-ide.org/
-
 Compiled with FPC 3.2.0
 
 Needed component:    https://sourceforge.net/p/lazarus-ccr/svn/HEAD/tree/components/fpexif/
