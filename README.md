@@ -38,3 +38,6 @@ Needed component:    https://sourceforge.net/p/lazarus-ccr/svn/HEAD/tree/compone
 EXIF tags:    https://exiftool.org/TagNames/EXIF.html
 
 JSON schema:  http://json-schema.org/
+
+-------------
+**Project discontinued** 
